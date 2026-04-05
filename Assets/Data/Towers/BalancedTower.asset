@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c9e385c5296c504a85803b1220ce75c, type: 3}
+  m_Name: BalancedTower
+  m_EditorClassIdentifier: 
+  towerName: Balanced Tower
+  towerType: 1
+  cost: 60
+  range: 3
+  fireRate: 1.5
+  damage: 25
+  sprite: {fileID: 0}
+  projectilePrefab: {fileID: 6494951758032652225, guid: 70bc960740b99bb4cadc1be31db12052, type: 3}
+  isProfessorTower: 0
+  requiredFaculty: 

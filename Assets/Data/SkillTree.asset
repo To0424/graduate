@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d81fdd96ed00de24a90840ebef373461, type: 3}
+  m_Name: SkillTree
+  m_EditorClassIdentifier: 
+  nodes:
+  - nodeName: Tutoring
+    description: +10% damage
+    cost: 1
+    section: 0
+    buff:
+      damageMultiplier: 1.1
+      rangeMultiplier: 1
+      fireRateMultiplier: 1
+      bonusStartGold: 0
+      bonusLives: 0
+      multiTarget: 0
+    prerequisiteNodeNames: []
+  - nodeName: Study Group
+    description: +1 bonus life
+    cost: 1
+    section: 0
+    buff:
+      damageMultiplier: 1
+      rangeMultiplier: 1
+      fireRateMultiplier: 1
+      bonusStartGold: 0
+      bonusLives: 1
+      multiTarget: 0
+    prerequisiteNodeNames:
+    - Tutoring
+  - nodeName: Part-time Cashier
+    description: +20 starting gold
+    cost: 1
+    section: 2
+    buff:
+      damageMultiplier: 1
+      rangeMultiplier: 1
+      fireRateMultiplier: 1
+      bonusStartGold: 20
+      bonusLives: 0
+      multiTarget: 0
+    prerequisiteNodeNames: []
