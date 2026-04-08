@@ -1,0 +1,90 @@
+GRADUATION — Tower Defense Game
+Group 23 Progress Report
+========================================
+
+PROJECT OVERVIEW
+----------------
+"Graduation" is a 2D tower defense game where players take on the role of a Year 4 HKU student battling through course monsters across faculty buildings. Players clear levels to earn credits, aiming for 240 credits to graduate. The game features fixed-path enemy movement (Bloons TD style), multiple tower types, a skill tree system, and an overworld map of HKU campus.
+
+Platform: PC (1920x1080) | Engine: Unity 2022.3 (URP 2D) | Language: C#
+
+
+CURRENT PROGRESS
+----------------
+1. Core Architecture (Complete)
+   - Game state machine (MainMenu, Overworld, Playing, Paused, LevelWon, LevelLost, Graduated)
+   - Persistent singleton managers with DontDestroyOnLoad (GameManager, CreditManager, SkillPointManager, SkillTreeManager)
+   - Scene flow: Main Menu → Overworld (faculty/level select) → Gameplay → back to Overworld
+   - Save/load system via PlayerPrefs (completed courses, credits, skill points, skill tree)
+
+2. Gameplay Systems (Complete)
+   - Fixed waypoint path system with random path selection per difficulty tier (3 easy patterns created)
+   - Wave spawner with multi-round support and round completion detection
+   - Tower placement system with click-to-build on designated slots and preview ghost
+   - 4 tower types: Rapid (cyan), Balanced (blue), Sniper (purple), Professor (gold)
+   - Projectile system with homing and auto-destroy
+   - Enemy pathfinding along waypoints with HP bars (green-to-red gradient)
+
+3. Economy & Progression (Complete)
+   - Per-level gold for tower purchases (resets each level)
+   - Credits earned on first clear only — replaying completed courses gives no duplicate rewards
+   - Skill points earned alongside credits (first clear only)
+   - Skill tree with 4 sections (Social, Internship, Part-time Work, Certifications) buffing all towers
+   - Professor tower unlock by clearing all courses in a faculty
+   - New Game reset functionality (clears all progress)
+
+4. UI & HUD (Complete)
+   - Gameplay HUD: Gold, Lives, Round counter, Round timer, Enemies remaining
+   - Tower shop panel (left side, color-coded buttons)
+   - Pause/Resume overlay with Quit to Map
+   - Level Won panel (shows rewards on first clear, "Already Completed" on replay)
+   - Level Lost panel with Retry/Quit options
+   - Graduation screen at 240 credits
+   - Main Menu with Continue / New Game / Quit
+   - Overworld with faculty buttons and level select
+
+5. Auto-Setup & Tooling (Complete)
+   - All scenes self-build at runtime (no manual Unity scene setup required)
+   - Editor wizard tool (Graduation → Setup Starter Data) auto-generates all prefabs and ScriptableObjects
+   - RuntimeSprite utility for procedural placeholder graphics
+   - Architecture supports swapping in custom art via ScriptableObject sprite fields
+
+Total scripts: 22+ across 8 folders (Core, Map, Enemies, Towers, Waves, Economy, UI, Editor)
+
+
+KNOWN LIMITATIONS
+-----------------
+- All visuals are placeholder (procedural squares/circles) — no pixel art yet
+- Only 1 faculty (EEE) with 2 levels created as test data
+- No sound effects or music
+- Skill tree has no dedicated UI screen (data system works, UI not built)
+- No enemy variety or special abilities
+- No cloud save (local PlayerPrefs only)
+
+
+TWO-WEEK PLAN
+-------------
+Week 1 — Art & Content
+   - Create 32x32 pixel art for: 3 enemy types, 4 tower types, projectiles
+   - Design and draw HKU building backgrounds for levels (classroom theme)
+   - Design overworld pixel map of HKU campus
+   - Add 2 more faculties (FBE, ART) with 3 courses each
+   - Create medium and hard difficulty path patterns (2-3 spawn points)
+   - Add enemy type variety (fast/tanky/swarm) per course tier
+
+Week 2 — Polish & Features
+   - Build Skill Tree UI screen (accessible from overworld, 4 sections with node layout)
+   - Add tower range indicator (circle shown on hover/placement)
+   - Add sell tower functionality
+   - Implement sound effects (tower shoot, enemy death, level complete)
+   - Balance pass: tower costs, enemy HP/speed, gold rewards, credit values
+   - Playtesting and bug fixes
+   - Prepare build for demo
+
+
+TEAM MEMBER CONTRIBUTIONS
+-------------------------
+Preston (Wong Hei Nam)  — Lead Programmer: core architecture, enemy pathing, tower mechanics
+Ho Lam (Tang)           — Game Designer: Professor abilities, synergy system, difficulty balancing
+Davis (Wu Kwun To)      — Level Designer & Pixel Artist: pixel art, HKU building path maps
+Oscar (Wong Kai Ching)  — Backend: cloud saves, UI framework, random encounters
