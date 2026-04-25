@@ -23,6 +23,9 @@ public static class MarathonMode
     public static int CurrentWave;          // 1-based; 0 = pre-run
     public static int BuffSelectionsTaken;
     public static int PityCounter;          // resets when a hero is picked
+    private static readonly List<string> pickedBuffHistory = new List<string>();
+
+    public static IReadOnlyList<string> PickedBuffHistory => pickedBuffHistory;
 
     public static EnemyData[] EnemyPool;    // [0]=basic [1]=fast [2]=tank [3]=shielded [4]=stealth [5]=boss [6]=splitter [7]=shieldAura
     public static int SpawnPointCount = 1;
@@ -65,6 +68,7 @@ public static class MarathonMode
         BuffSelectionsTaken = 0;
         PityCounter = 0;
         BuffPool.Clear();
+        pickedBuffHistory.Clear();
 
         if (!_hooked)
         {
@@ -92,6 +96,7 @@ public static class MarathonMode
         IsActive = false;
         EnemyPool = null;
         BuffPool.Clear();
+        pickedBuffHistory.Clear();
     }
 
     /// <summary>Generate the WaveData for round N (0-based). Boss waves drop
@@ -399,6 +404,12 @@ public static class MarathonMode
     {
         BuffSelectionsTaken++;
         if (picked == null) return;
+
+        string title = string.IsNullOrWhiteSpace(picked.title)
+            ? picked.kind.ToString()
+            : picked.title;
+        pickedBuffHistory.Add($"Wave {CurrentWave}: {title} ({picked.RarityLabel()})");
+
         if (picked.rarity == BuffRarity.Hero) PityCounter = 0;
         else PityCounter++;
         // One-shot offers (tower / hero unlocks) should never reappear once

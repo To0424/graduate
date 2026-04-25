@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class PathManager : MonoBehaviour
 {
@@ -15,6 +16,12 @@ public class PathManager : MonoBehaviour
     [Header("Prefabs")]
     public GameObject waypointMarkerPrefab;
     public GameObject towerSlotPrefab;
+
+    [Header("Tower Slot Cleanup")]
+    public bool autoCleanTowerSlots = true;
+    [Min(0f)] public float minSlotDistanceToPath = 0.7f;
+    [Min(0f)] public float minSlotDistanceToSpawnOrExit = 0.9f;
+    [Min(0f)] public float minSlotSpacing = 0.8f;
 
     public void LoadPathForTier(int tier)
     {
@@ -145,12 +152,16 @@ public class PathManager : MonoBehaviour
         }
 
         // Create tower slots with visible squares
-        currentTowerSlots = new TowerSlot[pattern.towerSlotPositions.Length];
+        List<Vector3> slotPositions = autoCleanTowerSlots
+            ? BuildCleanTowerSlotList(pattern)
+            : new List<Vector3>(pattern.towerSlotPositions ?? new Vector3[0]);
+
+        currentTowerSlots = new TowerSlot[slotPositions.Count];
         GameObject slotsParent = new GameObject("TowerSlots");
-        for (int i = 0; i < pattern.towerSlotPositions.Length; i++)
+        for (int i = 0; i < slotPositions.Count; i++)
         {
             GameObject slotObj = new GameObject($"Slot{i}");
-            slotObj.transform.position = pattern.towerSlotPositions[i];
+            slotObj.transform.position = slotPositions[i];
             slotObj.transform.SetParent(slotsParent.transform);
 
             // Add TowerSlot component
@@ -170,6 +181,98 @@ public class PathManager : MonoBehaviour
 
             currentTowerSlots[i] = slot;
         }
+    }
+
+    List<Vector3> BuildCleanTowerSlotList(PathPatternData pattern)
+    {
+        var raw = pattern.towerSlotPositions ?? new Vector3[0];
+        var kept = new List<Vector3>(raw.Length);
+
+        foreach (Vector3 p in raw)
+        {
+            if (TooCloseToSpawnOrExit(pattern, p)) continue;
+            if (TooCloseToPath(pattern, p)) continue;
+
+            bool overlaps = false;
+            foreach (Vector3 k in kept)
+            {
+                if (Vector2.Distance(k, p) < minSlotSpacing)
+                {
+                    overlaps = true;
+                    break;
+                }
+            }
+            if (overlaps) continue;
+
+            kept.Add(p);
+        }
+
+        if (raw.Length > 0 && kept.Count == 0)
+        {
+            // Safety fallback: keep original data instead of removing all slots.
+            kept.AddRange(raw);
+        }
+
+        int removed = raw.Length - kept.Count;
+        if (removed > 0)
+            Debug.Log($"[PathManager] Filtered {removed} tower slot(s) from '{pattern.patternName}'.");
+
+        return kept;
+    }
+
+    bool TooCloseToSpawnOrExit(PathPatternData pattern, Vector3 pos)
+    {
+        if (pattern.spawnPointPositions != null)
+        {
+            foreach (Vector3 s in pattern.spawnPointPositions)
+            {
+                if (Vector2.Distance(s, pos) < minSlotDistanceToSpawnOrExit)
+                    return true;
+            }
+        }
+
+        return Vector2.Distance(pattern.exitPosition, pos) < minSlotDistanceToSpawnOrExit;
+    }
+
+    bool TooCloseToPath(PathPatternData pattern, Vector3 pos)
+    {
+        // Legacy single-chain path.
+        if (pattern.waypointPositions != null && pattern.waypointPositions.Length > 1)
+        {
+            for (int i = 0; i < pattern.waypointPositions.Length - 1; i++)
+            {
+                float d = DistancePointToSegment(pos, pattern.waypointPositions[i], pattern.waypointPositions[i + 1]);
+                if (d < minSlotDistanceToPath) return true;
+            }
+        }
+
+        // Per-spawn route chains (custom map / marathon map). These usually
+        // include spawn and exit points in the chain itself.
+        if (pattern.spawnWaypointPositions != null)
+        {
+            foreach (var chain in pattern.spawnWaypointPositions)
+            {
+                if (chain == null || chain.positions == null || chain.positions.Length < 2) continue;
+                for (int i = 0; i < chain.positions.Length - 1; i++)
+                {
+                    float d = DistancePointToSegment(pos, chain.positions[i], chain.positions[i + 1]);
+                    if (d < minSlotDistanceToPath) return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    static float DistancePointToSegment(Vector2 p, Vector2 a, Vector2 b)
+    {
+        Vector2 ab = b - a;
+        float denom = ab.sqrMagnitude;
+        if (denom <= Mathf.Epsilon) return Vector2.Distance(p, a);
+
+        float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / denom);
+        Vector2 closest = a + t * ab;
+        return Vector2.Distance(p, closest);
     }
 
     /// <summary>

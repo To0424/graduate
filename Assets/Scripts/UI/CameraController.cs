@@ -20,8 +20,10 @@ public class CameraController : MonoBehaviour
     public bool  enableKeyboardPan = true;
     public float keyboardPanSpeed  = 12f;
 
-    [Header("Bounds (set to 0,0 to disable)")]
+    [Header("Bounds (set both to 0,0 to disable)")]
+    [Tooltip("World-space min corner of the playable map bounds.")]
     public Vector2 worldMin = Vector2.zero;
+    [Tooltip("World-space max corner of the playable map bounds.")]
     public Vector2 worldMax = Vector2.zero;
 
     Camera _cam;
@@ -95,9 +97,33 @@ public class CameraController : MonoBehaviour
     void ClampToBounds()
     {
         if (worldMin == Vector2.zero && worldMax == Vector2.zero) return;
+
         Vector3 p = transform.position;
-        p.x = Mathf.Clamp(p.x, worldMin.x, worldMax.x);
-        p.y = Mathf.Clamp(p.y, worldMin.y, worldMax.y);
+
+        // Clamp camera center based on current viewport size, so zooming out
+        // cannot show large empty areas outside the map rectangle.
+        float halfH = _cam.orthographicSize;
+        float halfW = halfH * _cam.aspect;
+
+        float minX = worldMin.x + halfW;
+        float maxX = worldMax.x - halfW;
+        float minY = worldMin.y + halfH;
+        float maxY = worldMax.y - halfH;
+
+        // If viewport is larger than bounds on one axis, lock to center.
+        if (minX > maxX)
+        {
+            float cx = (worldMin.x + worldMax.x) * 0.5f;
+            minX = maxX = cx;
+        }
+        if (minY > maxY)
+        {
+            float cy = (worldMin.y + worldMax.y) * 0.5f;
+            minY = maxY = cy;
+        }
+
+        p.x = Mathf.Clamp(p.x, minX, maxX);
+        p.y = Mathf.Clamp(p.y, minY, maxY);
         transform.position = p;
     }
 

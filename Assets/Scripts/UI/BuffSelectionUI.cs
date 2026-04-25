@@ -144,14 +144,7 @@ public class BuffSelectionUI : MonoBehaviour
                 CurrencyManager.Instance?.AddGold(offer.amount);
                 break;
             case BuffOfferKind.BonusLife:
-                if (LivesManager.Instance != null)
-                {
-                    var f = typeof(LivesManager).GetField("currentLives",
-                        System.Reflection.BindingFlags.Instance |
-                        System.Reflection.BindingFlags.NonPublic |
-                        System.Reflection.BindingFlags.Public);
-                    if (f != null) { int v = (int)f.GetValue(LivesManager.Instance); f.SetValue(LivesManager.Instance, v + offer.amount); }
-                }
+                LivesManager.Instance?.RestoreLives(offer.amount);
                 break;
         }
     }

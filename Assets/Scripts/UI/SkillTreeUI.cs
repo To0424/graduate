@@ -13,6 +13,8 @@ public class SkillTreeUI : MonoBehaviour
 {
     // ── Public API ────────────────────────────────────────────────────────────
 
+    public bool IsOpen => _panel != null && _panel.activeSelf;
+
     public void Build(Transform canvasParent)
     {
         _panel = MakePanel(canvasParent, "SkillTreeOverlay", new Color(0.04f, 0.07f, 0.14f, 0.97f));

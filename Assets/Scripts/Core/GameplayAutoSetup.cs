@@ -63,6 +63,21 @@ public class GameplayAutoSetup : MonoBehaviour
     // Skill tree
     private SkillTreeUI skillTreeUI;
     private Button skillTreeOpenButton;
+    private TextMeshProUGUI skillTreeToggleLabel;
+
+    // Collapsible side shops
+    private GameObject towerShopPanel;
+    private GameObject heroShopPanel;
+    private Button towerShopToggleButton;
+    private Button heroShopToggleButton;
+    private TextMeshProUGUI towerShopToggleLabel;
+    private TextMeshProUGUI heroShopToggleLabel;
+
+    // Marathon buff history
+    private GameObject buffHistoryPanel;
+    private Button buffHistoryToggleButton;
+    private TextMeshProUGUI buffHistoryToggleLabel;
+    private TextMeshProUGUI buffHistoryBody;
 
     void Start()
     {
@@ -80,7 +95,16 @@ public class GameplayAutoSetup : MonoBehaviour
         CreateGameOverUI(canvas.transform);
         CreateHeroSkillUI(canvas.transform);
         CreateRoundCompleteBanner(canvas);
+        EnsureInGameSlotDebugEditor();
+        BringControlButtonsToFront();
         SetupLevel();
+    }
+
+    void EnsureInGameSlotDebugEditor()
+    {
+        if (FindFirstObjectByType<InGameSlotDebugEditor>() != null) return;
+        GameObject go = new GameObject("InGameSlotDebugEditor");
+        go.AddComponent<InGameSlotDebugEditor>();
     }
 
     void CreateRoundCompleteBanner(Canvas canvas)
@@ -250,27 +274,30 @@ public class GameplayAutoSetup : MonoBehaviour
 
         // Gold text
         GameObject goldObj = CreateText(topBar.transform, "GoldText", "Gold: 100", 28, Color.yellow);
-        SetAnchored(goldObj, new Vector2(0.1f, 0.5f), new Vector2(200, 50));
+        SetAnchored(goldObj, new Vector2(0.11f, 0.5f), new Vector2(220, 50));
         goldText = goldObj.GetComponent<TextMeshProUGUI>();
 
         // Lives text
         GameObject livesObj = CreateText(topBar.transform, "LivesText", "Lives: 20", 28, new Color(1f, 0.4f, 0.4f));
-        SetAnchored(livesObj, new Vector2(0.3f, 0.5f), new Vector2(200, 50));
+        SetAnchored(livesObj, new Vector2(0.28f, 0.5f), new Vector2(220, 50));
         livesText = livesObj.GetComponent<TextMeshProUGUI>();
 
         // Round text
-        GameObject roundObj = CreateText(topBar.transform, "RoundText", "Round: 0/0", 28, Color.white);
-        SetAnchored(roundObj, new Vector2(0.48f, 0.5f), new Vector2(200, 50));
+        string roundLabel = MarathonMode.IsActive
+            ? $"Round: 0/{MarathonMode.TOTAL_WAVES}"
+            : (EndlessMode.IsActive ? "Round: 0 (Endless)" : "Round: 0/0");
+        GameObject roundObj = CreateText(topBar.transform, "RoundText", roundLabel, 28, Color.white);
+        SetAnchored(roundObj, new Vector2(0.45f, 0.5f), new Vector2(220, 50));
         roundText = roundObj.GetComponent<TextMeshProUGUI>();
 
         // Round timer text (beside round)
         GameObject timerObj = CreateText(topBar.transform, "TimerText", "Time: 0s", 22, new Color(0.9f, 0.9f, 0.9f));
-        SetAnchored(timerObj, new Vector2(0.62f, 0.5f), new Vector2(150, 50));
+        SetAnchored(timerObj, new Vector2(0.60f, 0.5f), new Vector2(170, 50));
         timerText = timerObj.GetComponent<TextMeshProUGUI>();
 
         // Enemies left text
         GameObject enemiesObj = CreateText(topBar.transform, "EnemiesLeftText", "Enemies: 0", 22, new Color(1f, 0.6f, 0.3f));
-        SetAnchored(enemiesObj, new Vector2(0.8f, 0.5f), new Vector2(200, 50));
+        SetAnchored(enemiesObj, new Vector2(0.74f, 0.5f), new Vector2(220, 50));
         enemiesLeftText = enemiesObj.GetComponent<TextMeshProUGUI>();
 
         // Start Round button (bottom right)
@@ -279,18 +306,48 @@ public class GameplayAutoSetup : MonoBehaviour
         startRoundButton = startBtn.GetComponent<Button>();
         startRoundButton.onClick.AddListener(() => WaveSpawner.Instance?.StartNextRound());
 
-        // Pause button (top right)
-        GameObject pBtn = CreateButton(parent, "PauseBtn", "| |", new Color(0.4f, 0.4f, 0.4f));
-        SetAnchored(pBtn, new Vector2(0.95f, 0.96f), new Vector2(60, 40));
+        // Pause button (top-right nav)
+        GameObject pBtn = CreateButton(topBar.transform, "PauseBtn", "| |", new Color(0.4f, 0.4f, 0.4f));
+        SetAnchored(pBtn, new Vector2(0.965f, 0.5f), new Vector2(62, 36));
         pauseButton = pBtn.GetComponent<Button>();
         pauseBtnLabel = pBtn.GetComponentInChildren<TextMeshProUGUI>();
+        if (pauseBtnLabel) pauseBtnLabel.fontSize = 20;
         pauseButton.onClick.AddListener(TogglePause);
 
-        // Speed toggle button (left of pause). Cycles 1x → 2x → 3x.
-        GameObject spdBtn = CreateButton(parent, "SpeedBtn", ">    1x", new Color(0.18f, 0.45f, 0.25f));
-        SetAnchored(spdBtn, new Vector2(0.70f, 0.06f), new Vector2(120, 50));
+        // Left-corner circular controls for hero + skill (+ buffs in marathon).
+        GameObject heroBtn = CreateCircularButton(parent, "HeroShopToggleBtn", "H+", new Color(0.55f, 0.38f, 0.05f));
+        SetAnchored(heroBtn, new Vector2(0.05f, 0.12f), new Vector2(72, 72));
+        heroShopToggleButton = heroBtn.GetComponent<Button>();
+        heroShopToggleLabel = heroBtn.GetComponentInChildren<TextMeshProUGUI>();
+        if (heroShopToggleLabel) heroShopToggleLabel.fontSize = 24;
+        heroShopToggleButton.onClick.AddListener(ToggleHeroShopPanel);
+
+        // Skill Tree toggle (open/close)
+        GameObject stBtn = CreateCircularButton(parent, "SkillTreeBtn", "S+", new Color(0.25f, 0.18f, 0.55f));
+        SetAnchored(stBtn, new Vector2(0.05f, 0.21f), new Vector2(72, 72));
+        skillTreeOpenButton = stBtn.GetComponent<Button>();
+        skillTreeToggleLabel = stBtn.GetComponentInChildren<TextMeshProUGUI>();
+        if (skillTreeToggleLabel) skillTreeToggleLabel.fontSize = 24;
+        skillTreeOpenButton.onClick.AddListener(ToggleSkillTreePanel);
+
+        // Buff history toggle for marathon runs.
+        if (MarathonMode.IsActive)
+        {
+            GameObject buffBtn = CreateCircularButton(parent, "BuffHistoryBtn", "B+", new Color(0.18f, 0.5f, 0.45f));
+            SetAnchored(buffBtn, new Vector2(0.05f, 0.30f), new Vector2(72, 72));
+            buffHistoryToggleButton = buffBtn.GetComponent<Button>();
+            buffHistoryToggleLabel = buffBtn.GetComponentInChildren<TextMeshProUGUI>();
+            if (buffHistoryToggleLabel) buffHistoryToggleLabel.fontSize = 24;
+            buffHistoryToggleButton.onClick.AddListener(ToggleBuffHistoryPanel);
+            CreateBuffHistoryPanel(parent);
+        }
+
+        // Speed toggle button in nav bar (cycles 1x → 2x → 3x)
+        GameObject spdBtn = CreateButton(topBar.transform, "SpeedBtn", "1x", new Color(0.18f, 0.45f, 0.25f));
+        SetAnchored(spdBtn, new Vector2(0.90f, 0.5f), new Vector2(82, 36));
         Button spdBtnComp = spdBtn.GetComponent<Button>();
         TextMeshProUGUI spdLabel = spdBtn.GetComponentInChildren<TextMeshProUGUI>();
+        if (spdLabel) spdLabel.fontSize = 17;
         if (GameSpeedController.Instance == null)
         {
             var gsHost = new GameObject("--- GameSpeed ---");
@@ -302,17 +359,11 @@ public class GameplayAutoSetup : MonoBehaviour
             if (spdLabel != null)
             {
                 float m = GameSpeedController.CurrentMultiplier;
-                if      (Mathf.Approximately(m, 1f)) spdLabel.text = ">    1x";
-                else if (Mathf.Approximately(m, 2f)) spdLabel.text = ">>   2x";
-                else                                  spdLabel.text = ">>>  3x";
+                if      (Mathf.Approximately(m, 1f)) spdLabel.text = "1x";
+                else if (Mathf.Approximately(m, 2f)) spdLabel.text = "2x";
+                else                                  spdLabel.text = "3x";
             }
         });
-
-        // Skill Tree button (top right, left of pause)
-        GameObject stBtn = CreateButton(parent, "SkillTreeBtn", "Skill Tree", new Color(0.25f, 0.18f, 0.55f));
-        SetAnchored(stBtn, new Vector2(0.88f, 0.96f), new Vector2(140, 40));
-        skillTreeOpenButton = stBtn.GetComponent<Button>();
-        skillTreeOpenButton.onClick.AddListener(() => skillTreeUI?.Open());
 
         // Pause overlay panel (hidden by default)
         CreatePausePanel(parent);
@@ -334,12 +385,10 @@ public class GameplayAutoSetup : MonoBehaviour
         SetAnchored(resumeBtn, new Vector2(0.5f, 0.45f), new Vector2(250, 60));
         resumeBtn.GetComponent<Button>().onClick.AddListener(TogglePause);
 
-        GameObject quitBtn = CreateButton(pausePanel.transform, "QuitToMapBtn", "Quit to Map", new Color(0.6f, 0.2f, 0.2f));
+        string quitLabel = MarathonMode.IsActive ? "Quit to Menu" : "Quit to Map";
+        GameObject quitBtn = CreateButton(pausePanel.transform, "QuitToMapBtn", quitLabel, new Color(0.6f, 0.2f, 0.2f));
         SetAnchored(quitBtn, new Vector2(0.5f, 0.32f), new Vector2(250, 60));
-        quitBtn.GetComponent<Button>().onClick.AddListener(() => {
-            Time.timeScale = 1f;
-            GameManager.Instance?.GoToOverworld();
-        });
+        quitBtn.GetComponent<Button>().onClick.AddListener(QuitFromGameplay);
     }
 
     void TogglePause()
@@ -359,6 +408,119 @@ public class GameplayAutoSetup : MonoBehaviour
         }
     }
 
+    void ToggleTowerShopPanel()
+    {
+        if (towerShopPanel == null) return;
+        bool show = !towerShopPanel.activeSelf;
+        towerShopPanel.SetActive(show);
+        if (show && heroShopPanel != null) heroShopPanel.SetActive(false);
+        SyncNavButtonLabels();
+        BringControlButtonsToFront();
+    }
+
+    void ToggleHeroShopPanel()
+    {
+        if (heroShopPanel == null) return;
+        bool show = !heroShopPanel.activeSelf;
+        heroShopPanel.SetActive(show);
+        if (show && towerShopPanel != null) towerShopPanel.SetActive(false);
+        SyncNavButtonLabels();
+        BringControlButtonsToFront();
+    }
+
+    void ToggleSkillTreePanel()
+    {
+        if (skillTreeUI == null) return;
+        if (skillTreeUI.IsOpen) skillTreeUI.Close();
+        else                    skillTreeUI.Open();
+        SyncNavButtonLabels();
+        BringControlButtonsToFront();
+    }
+
+    void ToggleBuffHistoryPanel()
+    {
+        if (buffHistoryPanel == null) return;
+
+        bool show = !buffHistoryPanel.activeSelf;
+        if (show) RefreshBuffHistoryPanel();
+        buffHistoryPanel.SetActive(show);
+        SyncNavButtonLabels();
+        BringControlButtonsToFront();
+    }
+
+    void CreateBuffHistoryPanel(Transform parent)
+    {
+        buffHistoryPanel = CreatePanel(parent, "BuffHistoryPanel", new Color(0f, 0f, 0f, 0.78f));
+        RectTransform rt = buffHistoryPanel.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.12f, 0.16f);
+        rt.anchorMax = new Vector2(0.42f, 0.76f);
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+
+        GameObject title = CreateText(buffHistoryPanel.transform, "BuffHistoryTitle", "Buff Picks", 30, Color.white);
+        RectTransform tr = title.GetComponent<RectTransform>();
+        tr.anchorMin = new Vector2(0f, 0.88f);
+        tr.anchorMax = new Vector2(1f, 1f);
+        tr.offsetMin = Vector2.zero;
+        tr.offsetMax = Vector2.zero;
+
+        GameObject body = CreateText(buffHistoryPanel.transform, "BuffHistoryBody", "No buffs chosen yet.", 20, new Color(0.88f, 0.9f, 1f));
+        RectTransform br = body.GetComponent<RectTransform>();
+        br.anchorMin = new Vector2(0.06f, 0.06f);
+        br.anchorMax = new Vector2(0.94f, 0.86f);
+        br.offsetMin = Vector2.zero;
+        br.offsetMax = Vector2.zero;
+
+        buffHistoryBody = body.GetComponent<TextMeshProUGUI>();
+        if (buffHistoryBody != null)
+        {
+            buffHistoryBody.alignment = TextAlignmentOptions.TopLeft;
+            buffHistoryBody.enableWordWrapping = true;
+            buffHistoryBody.overflowMode = TextOverflowModes.Overflow;
+        }
+
+        buffHistoryPanel.SetActive(false);
+    }
+
+    void RefreshBuffHistoryPanel()
+    {
+        if (buffHistoryBody == null) return;
+
+        var picks = MarathonMode.PickedBuffHistory;
+        if (picks == null || picks.Count == 0)
+        {
+            buffHistoryBody.text = "No buffs chosen yet.";
+            return;
+        }
+
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < picks.Count; i++)
+            sb.AppendLine($"{i + 1}. {picks[i]}");
+
+        buffHistoryBody.text = sb.ToString();
+    }
+
+    void SyncNavButtonLabels()
+    {
+        if (towerShopToggleLabel != null)
+            towerShopToggleLabel.text = (towerShopPanel != null && towerShopPanel.activeSelf) ? "T-" : "T+";
+        if (heroShopToggleLabel != null)
+            heroShopToggleLabel.text = (heroShopPanel != null && heroShopPanel.activeSelf) ? "H-" : "H+";
+        if (skillTreeToggleLabel != null)
+            skillTreeToggleLabel.text = (skillTreeUI != null && skillTreeUI.IsOpen) ? "S-" : "S+";
+        if (buffHistoryToggleLabel != null)
+            buffHistoryToggleLabel.text = (buffHistoryPanel != null && buffHistoryPanel.activeSelf) ? "B-" : "B+";
+    }
+
+    void BringControlButtonsToFront()
+    {
+        // Keep the compact control row always clickable above any opened panel.
+        if (towerShopToggleButton != null) towerShopToggleButton.transform.SetAsLastSibling();
+        if (heroShopToggleButton != null) heroShopToggleButton.transform.SetAsLastSibling();
+        if (skillTreeOpenButton != null)  skillTreeOpenButton.transform.SetAsLastSibling();
+        if (buffHistoryToggleButton != null) buffHistoryToggleButton.transform.SetAsLastSibling();
+    }
+
     void SubscribeHUD()
     {
         onGoldChanged = (g) => { if (goldText) goldText.text = $"Gold: {g}"; };
@@ -366,7 +528,12 @@ public class GameplayAutoSetup : MonoBehaviour
         onRoundStart = (r) =>
         {
             if (roundText == null) return;
-            if (EndlessMode.IsActive)
+            if (MarathonMode.IsActive)
+            {
+                int shown = Mathf.Clamp(r + 1, 0, MarathonMode.TOTAL_WAVES);
+                roundText.text = $"Round: {shown}/{MarathonMode.TOTAL_WAVES}";
+            }
+            else if (EndlessMode.IsActive)
             {
                 roundText.text = $"Round: {r + 1} (Endless)";
             }
@@ -397,6 +564,9 @@ public class GameplayAutoSetup : MonoBehaviour
             roundTimer += Time.deltaTime;
             timerText.text = $"Time: {Mathf.FloorToInt(roundTimer)}s";
         }
+
+        // Keep control labels in sync if panels are closed by other UI controls.
+        SyncNavButtonLabels();
     }
 
     // ========== TOWER SHOP ==========
@@ -522,17 +692,29 @@ public class GameplayAutoSetup : MonoBehaviour
             else                    regularTowers.Add(td);
         }
 
-        // ── Regular tower shop (left panel) ──────────────────────────────────
-        if (regularTowers.Count > 0)
-            BuildShopPanel(parent, "TowerShopPanel", "TOWERS",
-                           new Vector2(0f, 0f), new Vector2(0.12f, 0.9f),
-                           regularTowers, isProfessor: false);
+        towerShopPanel = null;
+        heroShopPanel = null;
 
-        // ── Professor shop (right panel, only if there are professors) ────────
+        // Regular tower shop (left) — collapsed by default.
+        if (regularTowers.Count > 0)
+        {
+            towerShopPanel = BuildShopPanel(parent, "TowerShopPanel", "TOWERS",
+                                            new Vector2(0f, 0f), new Vector2(0.12f, 0.9f),
+                                            regularTowers, isProfessor: false);
+            towerShopPanel.SetActive(false);
+        }
+
+        // Hero / professor shop (right) — collapsed by default.
         if (professorTowers.Count > 0)
-            BuildShopPanel(parent, "ProfessorShopPanel", "HEROES",
-                           new Vector2(0.93f, 0.10f), new Vector2(1f, 0.85f),
-                           professorTowers, isProfessor: true);
+        {
+            heroShopPanel = BuildShopPanel(parent, "ProfessorShopPanel", "HEROES",
+                                           new Vector2(0.93f, 0.10f), new Vector2(1f, 0.85f),
+                                           professorTowers, isProfessor: true);
+            heroShopPanel.SetActive(false);
+        }
+
+        SyncNavButtonLabels();
+        BringControlButtonsToFront();
     }
 
     /// <summary>Destroy and recreate the side shop panels using the current
@@ -540,6 +722,9 @@ public class GameplayAutoSetup : MonoBehaviour
     /// towers mid-run so the side shop reflects them immediately.</summary>
     public void RebuildTowerShop()
     {
+        bool towerWasOpen = towerShopPanel != null && towerShopPanel.activeSelf;
+        bool heroWasOpen = heroShopPanel != null && heroShopPanel.activeSelf;
+
         var canvas = FindAnyObjectByType<Canvas>();
         if (canvas == null) return;
         Transform parent = canvas.transform;
@@ -547,13 +732,21 @@ public class GameplayAutoSetup : MonoBehaviour
         if (existingTowers != null) Destroy(existingTowers.gameObject);
         var existingHeroes = parent.Find("ProfessorShopPanel");
         if (existingHeroes != null) Destroy(existingHeroes.gameObject);
+
+        towerShopPanel = null;
+        heroShopPanel = null;
         CreateTowerShop(parent);
+
+        if (towerShopPanel != null) towerShopPanel.SetActive(towerWasOpen);
+        if (heroShopPanel != null) heroShopPanel.SetActive(heroWasOpen);
+        SyncNavButtonLabels();
+        BringControlButtonsToFront();
     }
 
-    void BuildShopPanel(Transform parent, string panelName, string title,
-                        Vector2 anchorMin, Vector2 anchorMax,
-                        System.Collections.Generic.List<TowerData> towers,
-                        bool isProfessor)
+    GameObject BuildShopPanel(Transform parent, string panelName, string title,
+                              Vector2 anchorMin, Vector2 anchorMax,
+                              System.Collections.Generic.List<TowerData> towers,
+                              bool isProfessor)
     {
         Color panelBg = isProfessor
             ? new Color(0.10f, 0.07f, 0f, 0.55f)   // warm dark gold tint for heroes
@@ -588,6 +781,18 @@ public class GameplayAutoSetup : MonoBehaviour
             subRT.offsetMin = Vector2.zero;
             subRT.offsetMax = Vector2.zero;
         }
+
+        // Explicit panel close button so the player can always hide shop UI.
+        GameObject closeBtn = CreateButton(shopPanel.transform, "CloseBtn", "X", new Color(0.2f, 0.2f, 0.2f, 0.9f));
+        SetAnchored(closeBtn, new Vector2(0.92f, 0.955f), new Vector2(38, 30));
+        TextMeshProUGUI closeLabel = closeBtn.GetComponentInChildren<TextMeshProUGUI>();
+        if (closeLabel != null) closeLabel.fontSize = 18;
+        closeBtn.GetComponent<Button>().onClick.AddListener(() =>
+        {
+            shopPanel.SetActive(false);
+            SyncNavButtonLabels();
+            BringControlButtonsToFront();
+        });
 
         // Tower buttons. Cap per-button height so a 1-hero list doesn't
         // produce a giant button that fills the entire panel.
@@ -625,6 +830,8 @@ public class GameplayAutoSetup : MonoBehaviour
 
             btn.GetComponent<Button>().onClick.AddListener(() => OnTowerSelected(td, prof));
         }
+
+        return shopPanel;
     }
 
     void OnTowerSelected(TowerData data, bool isProfessor)
@@ -676,9 +883,14 @@ public class GameplayAutoSetup : MonoBehaviour
         SetAnchored(spObj, new Vector2(0.5f, 0.48f), new Vector2(400, 40));
         spEarnedText = spObj.GetComponent<TextMeshProUGUI>();
 
-        GameObject contBtn = CreateButton(levelWonPanel.transform, "ContinueBtn", "Continue", new Color(0.2f, 0.6f, 0.3f));
+        string continueLabel = MarathonMode.IsActive ? "Main Menu" : "Continue";
+        GameObject contBtn = CreateButton(levelWonPanel.transform, "ContinueBtn", continueLabel, new Color(0.2f, 0.6f, 0.3f));
         SetAnchored(contBtn, new Vector2(0.5f, 0.35f), new Vector2(250, 60));
-        contBtn.GetComponent<Button>().onClick.AddListener(() => GameManager.Instance?.GoToOverworld());
+        contBtn.GetComponent<Button>().onClick.AddListener(() =>
+        {
+            if (MarathonMode.IsActive) GameManager.Instance?.GoToMainMenu();
+            else                       GameManager.Instance?.GoToOverworld();
+        });
 
         // --- Level Lost Panel ---
         levelLostPanel = CreatePanel(parent, "LevelLostPanel", new Color(0, 0, 0, 0.85f));
@@ -688,13 +900,15 @@ public class GameplayAutoSetup : MonoBehaviour
         CreateText(levelLostPanel.transform, "LostTitle", "LEVEL FAILED", 48, new Color(1f, 0.3f, 0.3f));
         SetAnchored(levelLostPanel.transform.Find("LostTitle").gameObject, new Vector2(0.5f, 0.6f), new Vector2(600, 60));
 
-        GameObject retryBtn = CreateButton(levelLostPanel.transform, "RetryBtn", "Retry", new Color(0.6f, 0.4f, 0.1f));
+        string retryLabel = MarathonMode.IsActive ? "Restart Marathon" : "Retry";
+        GameObject retryBtn = CreateButton(levelLostPanel.transform, "RetryBtn", retryLabel, new Color(0.6f, 0.4f, 0.1f));
         SetAnchored(retryBtn, new Vector2(0.4f, 0.4f), new Vector2(200, 60));
-        retryBtn.GetComponent<Button>().onClick.AddListener(() => GameManager.Instance?.RetryLevel());
+        retryBtn.GetComponent<Button>().onClick.AddListener(RetryCurrentMode);
 
-        GameObject quitBtn = CreateButton(levelLostPanel.transform, "QuitBtn", "Back to Map", new Color(0.4f, 0.4f, 0.4f));
+        string quitLabel = MarathonMode.IsActive ? "Main Menu" : "Back to Map";
+        GameObject quitBtn = CreateButton(levelLostPanel.transform, "QuitBtn", quitLabel, new Color(0.4f, 0.4f, 0.4f));
         SetAnchored(quitBtn, new Vector2(0.6f, 0.4f), new Vector2(200, 60));
-        quitBtn.GetComponent<Button>().onClick.AddListener(() => GameManager.Instance?.GoToOverworld());
+        quitBtn.GetComponent<Button>().onClick.AddListener(QuitFromGameplay);
 
         // --- Graduation Panel ---
         graduationPanel = CreatePanel(parent, "GraduationPanel", new Color(0, 0, 0, 0.9f));
@@ -753,6 +967,33 @@ public class GameplayAutoSetup : MonoBehaviour
         }
     }
 
+    void RetryCurrentMode()
+    {
+        Time.timeScale = 1f;
+        if (MarathonMode.IsActive)
+        {
+            MarathonMode.Launch();
+            return;
+        }
+
+        if (EndlessMode.IsActive)
+        {
+            EndlessMode.Launch();
+            return;
+        }
+
+        GameManager.Instance?.RetryLevel();
+    }
+
+    void QuitFromGameplay()
+    {
+        Time.timeScale = 1f;
+        if (MarathonMode.IsActive || EndlessMode.IsActive)
+            GameManager.Instance?.GoToMainMenu();
+        else
+            GameManager.Instance?.GoToOverworld();
+    }
+
     // ========== HERO SKILL UI ==========
 
     void CreateHeroSkillUI(Transform parent)
@@ -777,9 +1018,24 @@ public class GameplayAutoSetup : MonoBehaviour
         }
 
         pathManager.LoadPathForTier(level.pathDifficultyTier);
+    FitCameraToPlayableBoundsAndClampZoom();
         waveSpawner.Setup(level.rounds, pathManager.currentWaypoints);
         currencyManager.SetStartingGold(level.startingGold);
         livesManager.SetStartingLives(level.startingLives);
+
+        // Initial round label before the first wave starts.
+        if (roundText != null)
+        {
+            if (MarathonMode.IsActive)
+                roundText.text = $"Round: 0/{MarathonMode.TOTAL_WAVES}";
+            else if (EndlessMode.IsActive)
+                roundText.text = "Round: 0 (Endless)";
+            else
+            {
+                int total = level.rounds != null ? level.rounds.Length : 0;
+                roundText.text = $"Round: 0/{total}";
+            }
+        }
 
         // Hand off endless-mode wave generation to WaveSpawner if active.
         if (EndlessMode.IsActive)
@@ -804,16 +1060,103 @@ public class GameplayAutoSetup : MonoBehaviour
             SpriteRenderer bgSR = bg.AddComponent<SpriteRenderer>();
             bgSR.sprite = level.classroomBackground;
             bgSR.sortingOrder = -10;
-            // Scale to fill camera view
-            Camera cam = Camera.main;
-            if (cam != null)
+            bg.transform.position = new Vector3(0f, 0f, 5f);
+
+            // Keep background in world-space and fit to the playable map area
+            // so zooming out doesn't make it look like a tiny UI image.
+            MarathonBackgroundFitter fitter = bg.AddComponent<MarathonBackgroundFitter>();
+            fitter.followCamera = false;
+            fitter.overscan = 1.3f;
+        }
+    }
+
+    void FitCameraToPlayableBoundsAndClampZoom()
+    {
+        Camera cam = Camera.main;
+        if (cam == null) return;
+
+        CameraController cc = cam.GetComponent<CameraController>();
+        if (cc == null) return;
+
+        Bounds bounds;
+        if (!TryGetPlayableBounds(out bounds)) return;
+
+        // Small margin so edge slots stay visible without allowing huge empty areas.
+        bounds.Expand(new Vector3(1.2f, 1.2f, 0f));
+
+        cc.worldMin = new Vector2(bounds.min.x, bounds.min.y);
+        cc.worldMax = new Vector2(bounds.max.x, bounds.max.y);
+
+        // Limit max zoom-out to roughly the map extent.
+        float fitByHeight = bounds.size.y * 0.5f;
+        float fitByWidth = (bounds.size.x * 0.5f) / Mathf.Max(0.01f, cam.aspect);
+        float fitOrtho = Mathf.Max(fitByHeight, fitByWidth);
+        float desiredMaxOrtho = fitOrtho;
+
+        cc.maxOrthoSize = Mathf.Max(cc.minOrthoSize + 0.5f, desiredMaxOrtho);
+        if (cam.orthographicSize > cc.maxOrthoSize)
+            cam.orthographicSize = cc.maxOrthoSize;
+
+        // Start centered on the current playable region.
+        Vector3 p = cam.transform.position;
+        p.x = bounds.center.x;
+        p.y = bounds.center.y;
+        cam.transform.position = p;
+    }
+
+    bool TryGetPlayableBounds(out Bounds bounds)
+    {
+        bounds = new Bounds(Vector3.zero, Vector3.zero);
+        bool initialized = false;
+
+        if (pathManager == null || pathManager.currentWaypoints == null)
+            return false;
+
+        if (pathManager.currentWaypoints.points != null)
+        {
+            foreach (Transform t in pathManager.currentWaypoints.points)
+                Encapsulate(t, ref initialized, ref bounds);
+        }
+
+        if (pathManager.currentWaypoints.spawnPoints != null)
+        {
+            foreach (Transform t in pathManager.currentWaypoints.spawnPoints)
+                Encapsulate(t, ref initialized, ref bounds);
+        }
+
+        Encapsulate(pathManager.currentWaypoints.exitPoint, ref initialized, ref bounds);
+
+        if (pathManager.currentWaypoints.perSpawnPaths != null)
+        {
+            foreach (Transform[] chain in pathManager.currentWaypoints.perSpawnPaths)
             {
-                float camHeight = cam.orthographicSize * 2f;
-                float camWidth = camHeight * cam.aspect;
-                float spriteW = bgSR.sprite.bounds.size.x;
-                float spriteH = bgSR.sprite.bounds.size.y;
-                bg.transform.localScale = new Vector3(camWidth / spriteW, camHeight / spriteH, 1f);
+                if (chain == null) continue;
+                foreach (Transform t in chain)
+                    Encapsulate(t, ref initialized, ref bounds);
             }
+        }
+
+        if (pathManager.currentTowerSlots != null)
+        {
+            foreach (TowerSlot slot in pathManager.currentTowerSlots)
+                Encapsulate(slot != null ? slot.transform : null, ref initialized, ref bounds);
+        }
+
+        return initialized;
+    }
+
+    static void Encapsulate(Transform t, ref bool initialized, ref Bounds bounds)
+    {
+        if (t == null) return;
+
+        if (!initialized)
+        {
+            bounds = new Bounds(t.position, Vector3.zero);
+            initialized = true;
+        }
+        else
+        {
+            bounds.Encapsulate(t.position);
         }
     }
 
@@ -867,6 +1210,19 @@ public class GameplayAutoSetup : MonoBehaviour
         tmp.color = Color.white;
         tmp.alignment = TextAlignmentOptions.Center;
 
+        return btnObj;
+    }
+
+    GameObject CreateCircularButton(Transform parent, string name, string label, Color bgColor)
+    {
+        GameObject btnObj = CreateButton(parent, name, label, bgColor);
+        Image img = btnObj.GetComponent<Image>();
+        if (img != null)
+        {
+            img.sprite = RuntimeSprite.Circle;
+            img.type = Image.Type.Sliced;
+            img.preserveAspect = true;
+        }
         return btnObj;
     }
 
