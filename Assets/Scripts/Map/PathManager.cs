@@ -131,6 +131,15 @@ public class PathManager : MonoBehaviour
                 }
                 for (int j = 0; j < tArr.Length - 1; j++)
                     CreatePathLine(pathObj.transform, tArr[j].position, tArr[j + 1].position, 1000 + s * 100 + j);
+
+                // Home marker at the END of every per-spawn chain (multi-home maps).
+                Transform homeT = tArr[tArr.Length - 1];
+                SpriteRenderer homeSR = homeT.gameObject.AddComponent<SpriteRenderer>();
+                homeSR.sprite = RuntimeSprite.Circle;
+                homeSR.color = Color.green;
+                homeSR.sortingOrder = 2;
+                homeT.localScale = Vector3.one * 0.7f;
+
                 wp.perSpawnPaths[s] = tArr;
             }
         }

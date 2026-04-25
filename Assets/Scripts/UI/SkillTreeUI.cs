@@ -32,6 +32,9 @@ public class SkillTreeUI : MonoBehaviour
     public void Open()
     {
         if (_panel == null) return;
+        // The columns may not have been built yet (the SkillTreeManager / data
+        // wasn't ready when Build() ran). Retry now.
+        if (_cards.Count == 0) BuildColumns();
         _panel.SetActive(true);
         // Make sure we render on top of any sibling UI added after Build().
         _panel.transform.SetAsLastSibling();
@@ -112,8 +115,21 @@ public class SkillTreeUI : MonoBehaviour
 
     void BuildColumns()
     {
+        // Make sure a SkillTreeManager exists — if we were placed in a scene
+        // (e.g. Overworld) where no bootstrap created one, spin one up now so
+        // its placeholder tree is available.
+        if (SkillTreeManager.Instance == null)
+        {
+            var stmGO = new GameObject("SkillTreeManager (auto)");
+            stmGO.AddComponent<SkillTreeManager>();
+        }
+
         var data = SkillTreeManager.Instance != null ? SkillTreeManager.Instance.skillTreeData : null;
-        if (data == null) return;
+        if (data == null || data.nodes == null || data.nodes.Length == 0)
+        {
+            Debug.LogWarning("[SkillTreeUI] No SkillTreeData available; columns will be empty until Open() is called again with data.");
+            return;
+        }
 
         var sections = (SkillSection[])System.Enum.GetValues(typeof(SkillSection));
         float cw  = 1f / sections.Length;

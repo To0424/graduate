@@ -105,6 +105,23 @@ public class MainMenuSetup : MonoBehaviour
         TextMeshProUGUI mapLbl = mapBtn.GetComponentInChildren<TextMeshProUGUI>();
         if (mapLbl != null) mapLbl.fontSize = 22;
         mapBtn.GetComponent<Button>().onClick.AddListener(OnMapCreator);
+
+        // Endless Mode Button (left of Testing Mode)
+        GameObject endlessBtn = CreateButton(canvasObj.transform, "EndlessModeButton",
+                                              "ENDLESS MODE", new Color(0.55f, 0.18f, 0.22f));
+        RectTransform endRect = endlessBtn.GetComponent<RectTransform>();
+        endRect.anchorMin = new Vector2(0.5f, 0.05f);
+        endRect.anchorMax = new Vector2(0.5f, 0.05f);
+        endRect.anchoredPosition = new Vector2(-330, 0);
+        endRect.sizeDelta = new Vector2(300, 50);
+        TextMeshProUGUI endLbl = endlessBtn.GetComponentInChildren<TextMeshProUGUI>();
+        if (endLbl != null) endLbl.fontSize = 22;
+        endlessBtn.GetComponent<Button>().onClick.AddListener(OnEndlessMode);
+    }
+
+    void OnEndlessMode()
+    {
+        EndlessMode.Launch();
     }
 
     void OnTestingMode()

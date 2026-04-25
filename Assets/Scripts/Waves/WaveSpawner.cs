@@ -10,6 +10,15 @@ public class WaveSpawner : MonoBehaviour
     public WaveData[] rounds;
     public GameObject enemyPrefab;
 
+    [Header("Endless mode")]
+    /// <summary>When true, <see cref="OnAllRoundsComplete"/> is never raised
+    /// and waves are pulled from <see cref="nextWaveProvider"/> indefinitely.</summary>
+    public bool isEndless = false;
+    /// <summary>Optional callback invoked when a new round begins; should
+    /// return the wave to spawn for that 0-based round index. Used by
+    /// <see cref="EndlessMode"/>.</summary>
+    public System.Func<int, WaveData> nextWaveProvider;
+
     [Header("Runtime")]
     public int currentRound = 0;
     public int enemiesAlive = 0;
@@ -62,13 +71,23 @@ public class WaveSpawner : MonoBehaviour
             return;
         }
 
-        if (currentRound >= rounds.Length)
+        WaveData wave = ResolveWaveFor(currentRound);
+        if (wave == null)
         {
             OnAllRoundsComplete?.Invoke();
             return;
         }
 
-        StartCoroutine(SpawnRound(rounds[currentRound]));
+        StartCoroutine(SpawnRound(wave));
+    }
+
+    WaveData ResolveWaveFor(int round)
+    {
+        if (isEndless && nextWaveProvider != null)
+            return nextWaveProvider(round);
+        if (rounds != null && round < rounds.Length)
+            return rounds[round];
+        return null;
     }
 
     static int CountEnemiesInWave(WaveData wave)
@@ -106,7 +125,7 @@ public class WaveSpawner : MonoBehaviour
             OnRoundComplete?.Invoke(currentRound);
             currentRound++;
             Debug.Log($"[WaveSpawner] Round complete (all died during spawn). Next round: {currentRound}");
-            if (currentRound >= rounds.Length)
+            if (!isEndless && currentRound >= rounds.Length)
                 OnAllRoundsComplete?.Invoke();
         }
     }
@@ -131,7 +150,7 @@ public class WaveSpawner : MonoBehaviour
         {
             OnRoundComplete?.Invoke(currentRound);
             currentRound++;
-            if (currentRound >= rounds.Length)
+            if (!isEndless && currentRound >= rounds.Length)
             {
                 OnAllRoundsComplete?.Invoke();
             }

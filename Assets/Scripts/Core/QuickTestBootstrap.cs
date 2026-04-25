@@ -34,19 +34,36 @@ public class QuickTestBootstrap : MonoBehaviour
 
     void Awake()
     {
-        bool forced = TestingModeLauncher.TestingModeRequested;
+        bool endless = EndlessMode.LaunchRequested;
+        EndlessMode.ConsumeRequest();
+
+        bool forced = TestingModeLauncher.TestingModeRequested || endless;
         TestingModeLauncher.ConsumeRequest();
 
         // Only bootstrap when there is no GameManager (direct scene play),
-        // OR when we were explicitly launched via the main-menu Testing Mode.
+        // OR when we were explicitly launched via the main-menu Testing Mode
+        // / Endless Mode buttons.
         if (GameManager.Instance != null && !forced) return;
 
         Debug.Log(forced
-            ? "[QuickTest] Testing Mode requested \u2014 bootstrapping test session."
+            ? (endless
+                ? "[QuickTest] Endless Mode requested \u2014 bootstrapping endless session."
+                : "[QuickTest] Testing Mode requested \u2014 bootstrapping test session.")
             : "[QuickTest] No GameManager found \u2014 bootstrapping test session.");
 
         // Apply testing-mode overrides if the launcher injected any.
-        TestingModeLauncher.ApplyOverridesTo(this);
+        if (!endless) TestingModeLauncher.ApplyOverridesTo(this);
+        else
+        {
+            // Endless preset: more lives, more starting gold, all archetypes,
+            // professor available so the player has tools to survive.
+            startingGold      = 350;
+            startingLives     = 30;
+            includeArchetypes = true;
+            includeProfessor  = true;
+            roundCount        = 1;          // ignored — endless replaces this
+            customMapName     = null;       // ignored — endless map below
+        }
 
         // 1. Persistent managers (skip if we already have a GameManager from the menu)
         if (GameManager.Instance == null)
@@ -61,9 +78,19 @@ public class QuickTestBootstrap : MonoBehaviour
         EnemyData[]       enemies  = MakeEnemyData();
         TowerData[]       towers   = MakeTowerData(projectilePrefab, includeProfessor);
         WaveData[]        waves    = MakeWaves(enemies, roundCount, includeArchetypes);
-        PathPatternData   path     = MakePath();
+        PathPatternData   path     = endless ? MakeEndlessPath() : MakePath();
         LevelData         level    = MakeLevel(waves, path);
         FacultyData       faculty  = MakeFaculty(level, towers, includeProfessor);
+
+        if (endless)
+        {
+            // Wire endless mode: provider + enemy pool + spawn-point count.
+            EndlessMode.IsActive       = true;
+            EndlessMode.EnemyPool      = enemies;
+            EndlessMode.SpawnPointCount = path.spawnPointPositions != null
+                                          ? path.spawnPointPositions.Length : 1;
+            EndlessMode.CurrentRound   = 0;
+        }
 
         // 4. Tell GameManager which level to run
         GameManager.Instance.currentFaculty    = faculty;
@@ -311,6 +338,7 @@ public class QuickTestBootstrap : MonoBehaviour
         sniper.damage           = 80;
         sniper.projectilePrefab = projPrefab;
         sniper.damageType       = DamageType.Pierce;  // pierce test
+        sniper.hasDetection     = true; // can reveal stealth enemies
 
         if (!withProfessor)
             return new TowerData[] { rapid, balanced, sniper };
@@ -485,6 +513,95 @@ public class QuickTestBootstrap : MonoBehaviour
             new Vector3(-5, -1.5f, 0),
             new Vector3( 5, -1.5f, 0)
         };
+        return p;
+    }
+
+    /// <summary>
+    /// Large multi-spawn / multi-home map used by Endless Mode. Enough screen
+    /// real-estate that the player must pan/zoom (CameraController handles
+    /// that) to see everything at once. Three independent paths each end at
+    /// their own home; defending all three is the core challenge.
+    /// </summary>
+    PathPatternData MakeEndlessPath()
+    {
+        PathPatternData p = ScriptableObject.CreateInstance<PathPatternData>();
+        p.patternName    = "Endless Campus";
+        p.difficultyTier = 4;
+
+        // Three spawn entry points around the perimeter
+        p.spawnPointPositions = new Vector3[]
+        {
+            new Vector3(-18,  8, 0),   // top-left gate
+            new Vector3( 18,  8, 0),   // top-right gate
+            new Vector3(-18, -8, 0),   // bottom-left gate
+        };
+
+        // Per-spawn waypoint chains — each ending at its OWN home point.
+        var chains = new PathPatternData.SpawnWaypoints[3];
+
+        // Path A (top-left ➜ centre-right home)
+        chains[0] = new PathPatternData.SpawnWaypoints { positions = new Vector3[] {
+            new Vector3(-18,  8, 0),
+            new Vector3(-12,  8, 0),
+            new Vector3(-12,  3, 0),
+            new Vector3( -4,  3, 0),
+            new Vector3( -4, -2, 0),
+            new Vector3(  6, -2, 0),
+            new Vector3(  6,  2, 0),
+            new Vector3( 14,  2, 0),
+            new Vector3( 16,  2, 0),    // HOME A
+        }};
+
+        // Path B (top-right ➜ centre-left home)
+        chains[1] = new PathPatternData.SpawnWaypoints { positions = new Vector3[] {
+            new Vector3( 18,  8, 0),
+            new Vector3( 12,  8, 0),
+            new Vector3( 12,  4, 0),
+            new Vector3(  2,  4, 0),
+            new Vector3(  2, -5, 0),
+            new Vector3( -8, -5, 0),
+            new Vector3( -8, -1, 0),
+            new Vector3(-14, -1, 0),
+            new Vector3(-16, -1, 0),    // HOME B
+        }};
+
+        // Path C (bottom-left ➜ top-centre home)
+        chains[2] = new PathPatternData.SpawnWaypoints { positions = new Vector3[] {
+            new Vector3(-18, -8, 0),
+            new Vector3( -2, -8, 0),
+            new Vector3( -2, -5, 0),
+            new Vector3(  8, -5, 0),
+            new Vector3(  8,  6, 0),
+            new Vector3(  0,  6, 0),
+            new Vector3(  0,  9, 0),    // HOME C
+        }};
+
+        p.spawnWaypointPositions = chains;
+
+        // Legacy single-chain path is unused when per-spawn chains are set,
+        // but we still set a sensible default for the rendering safety net.
+        p.waypointPositions = chains[0].positions;
+        p.exitPosition      = chains[0].positions[chains[0].positions.Length - 1];
+
+        // Tower slots distributed around the safe areas next to the paths.
+        p.towerSlotPositions = new Vector3[]
+        {
+            // Top corridor (between paths A & B)
+            new Vector3(-10,  6, 0), new Vector3(-6,  6, 0), new Vector3( 0,  6, 0),
+            new Vector3(  6,  6, 0), new Vector3(10,  6, 0),
+            // Middle band (junctions of all three paths)
+            new Vector3(-10,  1, 0), new Vector3(-6,  0, 0), new Vector3( 0,  0, 0),
+            new Vector3(  6,  0, 0), new Vector3(10,  0, 0), new Vector3(14, -2, 0),
+            // Lower band (path C territory)
+            new Vector3(-12, -3, 0), new Vector3(-6, -3, 0), new Vector3( 0, -3, 0),
+            new Vector3(  4, -3, 0), new Vector3(10, -3, 0),
+            // Bottom strip
+            new Vector3(-14, -6, 0), new Vector3(-8, -6, 0), new Vector3(-2, -6, 0),
+            new Vector3(  4, -6, 0), new Vector3(10, -6, 0), new Vector3(14, -6, 0),
+            // Outside flank (defends home A & home B)
+            new Vector3( 14,  4, 0), new Vector3(-14,  1, 0), new Vector3(-14, -4, 0),
+        };
+
         return p;
     }
 

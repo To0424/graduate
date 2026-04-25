@@ -181,6 +181,19 @@ public class GameplayAutoSetup : MonoBehaviour
             cam.clearFlags = CameraClearFlags.SolidColor;
             camObj.AddComponent<AudioListener>();
         }
+
+        // Add (or refresh) pan + zoom controls. Endless mode wants a wider
+        // initial zoom so the player can see the full multi-home map.
+        Camera mainCam = Camera.main;
+        if (mainCam.GetComponent<CameraController>() == null)
+            mainCam.gameObject.AddComponent<CameraController>();
+        if (EndlessMode.IsActive)
+        {
+            mainCam.orthographicSize = 12f;
+            CameraController cc = mainCam.GetComponent<CameraController>();
+            cc.maxOrthoSize = 22f;
+            cc.minOrthoSize = 5f;
+        }
     }
 
     void CreateEventSystem()
@@ -315,8 +328,15 @@ public class GameplayAutoSetup : MonoBehaviour
         onRoundStart = (r) =>
         {
             if (roundText == null) return;
-            int total = WaveSpawner.Instance != null ? WaveSpawner.Instance.rounds.Length : 0;
-            roundText.text = $"Round: {r + 1}/{total}";
+            if (EndlessMode.IsActive)
+            {
+                roundText.text = $"Round: {r + 1} (Endless)";
+            }
+            else
+            {
+                int total = WaveSpawner.Instance != null ? WaveSpawner.Instance.rounds.Length : 0;
+                roundText.text = $"Round: {r + 1}/{total}";
+            }
             roundTimer = 0f;
             roundTimerActive = true;
         };
@@ -667,6 +687,13 @@ public class GameplayAutoSetup : MonoBehaviour
         currencyManager.SetStartingGold(level.startingGold);
         livesManager.SetStartingLives(level.startingLives);
 
+        // Hand off endless-mode wave generation to WaveSpawner if active.
+        if (EndlessMode.IsActive)
+        {
+            waveSpawner.isEndless = true;
+            waveSpawner.nextWaveProvider = EndlessMode.GenerateWave;
+        }
+
         // Apply classroom background if assigned
         if (level.classroomBackground != null)
         {
@@ -694,6 +721,9 @@ public class GameplayAutoSetup : MonoBehaviour
         if (onLivesChanged != null) LivesManager.OnLivesChanged -= onLivesChanged;
         if (onRoundStart != null) WaveSpawner.OnRoundStart -= onRoundStart;
         if (onEnemyCountChanged != null) WaveSpawner.OnEnemyCountChanged -= onEnemyCountChanged;
+
+        // Endless run is always tied to the gameplay scene's lifetime.
+        if (EndlessMode.IsActive) EndlessMode.EndRun();
     }
 
     // ========== UI HELPERS ==========
