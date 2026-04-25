@@ -35,6 +35,7 @@ public static class InteractionTimeScale
     {
         // Don't override hard pause (Time.timeScale == 0) initiated by GameManager.
         if (Mathf.Approximately(Time.timeScale, 0f)) return;
-        Time.timeScale = _refCount > 0 ? SlowScale : 1f;
+        // When un-slowed, restore to the player's chosen game-speed multiplier.
+        Time.timeScale = _refCount > 0 ? SlowScale : GameSpeedController.CurrentMultiplier;
     }
 }

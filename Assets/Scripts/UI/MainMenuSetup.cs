@@ -58,8 +58,8 @@ public class MainMenuSetup : MonoBehaviour
         // Play Button (Continue)
         GameObject playBtn = CreateButton(canvasObj.transform, "PlayButton", "CONTINUE", new Color(0.2f, 0.6f, 0.3f));
         RectTransform playRect = playBtn.GetComponent<RectTransform>();
-        playRect.anchorMin = new Vector2(0.5f, 0.38f);
-        playRect.anchorMax = new Vector2(0.5f, 0.38f);
+        playRect.anchorMin = new Vector2(0.5f, 0.46f);
+        playRect.anchorMax = new Vector2(0.5f, 0.46f);
         playRect.anchoredPosition = Vector2.zero;
         playRect.sizeDelta = new Vector2(300, 70);
         playBtn.GetComponent<Button>().onClick.AddListener(OnPlay);
@@ -67,8 +67,8 @@ public class MainMenuSetup : MonoBehaviour
         // New Game Button
         GameObject newBtn = CreateButton(canvasObj.transform, "NewGameButton", "NEW GAME", new Color(0.6f, 0.4f, 0.1f));
         RectTransform newRect = newBtn.GetComponent<RectTransform>();
-        newRect.anchorMin = new Vector2(0.5f, 0.27f);
-        newRect.anchorMax = new Vector2(0.5f, 0.27f);
+        newRect.anchorMin = new Vector2(0.5f, 0.35f);
+        newRect.anchorMax = new Vector2(0.5f, 0.35f);
         newRect.anchoredPosition = Vector2.zero;
         newRect.sizeDelta = new Vector2(300, 70);
         newBtn.GetComponent<Button>().onClick.AddListener(OnNewGame);
@@ -76,8 +76,8 @@ public class MainMenuSetup : MonoBehaviour
         // Quit Button
         GameObject quitBtn = CreateButton(canvasObj.transform, "QuitButton", "QUIT", new Color(0.6f, 0.2f, 0.2f));
         RectTransform quitRect = quitBtn.GetComponent<RectTransform>();
-        quitRect.anchorMin = new Vector2(0.5f, 0.16f);
-        quitRect.anchorMax = new Vector2(0.5f, 0.16f);
+        quitRect.anchorMin = new Vector2(0.5f, 0.14f);
+        quitRect.anchorMax = new Vector2(0.5f, 0.14f);
         quitRect.anchoredPosition = Vector2.zero;
         quitRect.sizeDelta = new Vector2(300, 70);
         quitBtn.GetComponent<Button>().onClick.AddListener(OnQuit);
@@ -122,8 +122,8 @@ public class MainMenuSetup : MonoBehaviour
         GameObject marathonBtn = CreateButton(canvasObj.transform, "MarathonModeButton",
                                               "MARATHON (40 WAVES)", new Color(0.85f, 0.45f, 0.1f));
         RectTransform mRect = marathonBtn.GetComponent<RectTransform>();
-        mRect.anchorMin = new Vector2(0.5f, 0.13f);
-        mRect.anchorMax = new Vector2(0.5f, 0.13f);
+        mRect.anchorMin = new Vector2(0.5f, 0.24f);
+        mRect.anchorMax = new Vector2(0.5f, 0.24f);
         mRect.anchoredPosition = Vector2.zero;
         mRect.sizeDelta = new Vector2(360, 56);
         TextMeshProUGUI mLbl = marathonBtn.GetComponentInChildren<TextMeshProUGUI>();

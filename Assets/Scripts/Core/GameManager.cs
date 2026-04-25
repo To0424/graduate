@@ -74,7 +74,7 @@ public class GameManager : MonoBehaviour
         if (newState == GameState.Paused)
             Time.timeScale = 0f;
         else
-            Time.timeScale = 1f;
+            Time.timeScale = GameSpeedController.CurrentMultiplier;
     }
 
     public void StartLevel(FacultyData faculty, int courseIndex)

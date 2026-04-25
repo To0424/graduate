@@ -13,6 +13,7 @@ public static class MarathonMode
 {
     public const int TOTAL_WAVES        = 40;
     public const int BOSS_INTERVAL      = 10;  // boss every 10 waves
+    public const int MINIBOSS_INTERVAL  = 5;   // miniboss every 5 waves (skipped on boss waves)
     public const int BUFF_INTERVAL      = 2;   // buff selection every 2 waves
     public const int HERO_PITY_LIMIT    = 5;   // guaranteed hero by the 5th selection
 
@@ -92,26 +93,48 @@ public static class MarathonMode
         CurrentWave = wave1Based;
         OnWaveChanged?.Invoke(wave1Based);
 
-        bool isBossWave = wave1Based % BOSS_INTERVAL == 0;
+        bool isBossWave     = wave1Based % BOSS_INTERVAL == 0;
+        bool isMinibossWave = !isBossWave && wave1Based % MINIBOSS_INTERVAL == 0;
         int sp = ActiveSpawnCount(wave1Based);
 
         var groups = new List<EnemyGroup>();
-        float hpMul = 1f + (wave1Based - 1) * 0.06f;
+        // HP scaling — steeper than endless. Roughly +12% per wave linear,
+        // plus a soft exponential kick after wave 20.
+        float hpMul = 1f + (wave1Based - 1) * 0.12f;
+        if (wave1Based > 20) hpMul *= 1f + (wave1Based - 20) * 0.04f;
         int   goldBonus = (wave1Based - 1) / 4;
 
         if (isBossWave && EnemyPool.Length > 5)
         {
-            // Static boss difficulty per-tier (static = same for all players).
+            // Big boss: per-tier HP curve + ability set.
             int bossTier = wave1Based / BOSS_INTERVAL; // 1..4
-            float bossHp = 1f + (bossTier - 1) * 0.6f;
-            EnemyData boss = ScaledClone(EnemyPool[5], bossHp, goldBonus * 6);
+            float bossHp = 6f + (bossTier - 1) * 5f;   // 6x, 11x, 16x, 21x base
+            EnemyData boss = ScaledClone(EnemyPool[5], bossHp * hpMul / 2f, goldBonus * 8);
             boss.enemyName = BossNameForWave(wave1Based);
+            ApplyBossAbilities(boss, bossTier, EnemyPool[0]);
             groups.Add(new EnemyGroup { enemyType = boss, count = 1 + (bossTier >= 3 ? 1 : 0),
                                         spawnInterval = 3f, spawnPointIndex = 0 });
             // A handful of grunts arriving with the boss.
             EnemyData minion = ScaledClone(EnemyPool[0], hpMul * 0.8f, 0);
             for (int i = 0; i < sp; i++)
                 groups.Add(new EnemyGroup { enemyType = minion, count = 6 + bossTier * 2,
+                                            spawnInterval = 0.7f, spawnPointIndex = i });
+        }
+        else if (isMinibossWave && EnemyPool.Length > 5)
+        {
+            // Miniboss: scaled-down boss with one ability based on wave.
+            int mbTier = wave1Based / MINIBOSS_INTERVAL;
+            float mbHp = 2.5f + (mbTier - 1) * 0.6f;
+            EnemyData mb = ScaledClone(EnemyPool[5], mbHp * hpMul / 2f, goldBonus * 4);
+            mb.enemyName = MinibossNameForWave(wave1Based);
+            mb.bossScale = 1.7f;
+            ApplyMinibossAbility(mb, mbTier);
+            groups.Add(new EnemyGroup { enemyType = mb, count = 1,
+                                        spawnInterval = 2f, spawnPointIndex = 0 });
+            // Standard wave content also spawns alongside the miniboss for filler.
+            EnemyData basic = ScaledClone(EnemyPool[0], hpMul, goldBonus);
+            for (int i = 0; i < sp; i++)
+                groups.Add(new EnemyGroup { enemyType = basic, count = 4 + wave1Based / 4,
                                             spawnInterval = 0.7f, spawnPointIndex = i });
         }
         else
@@ -191,6 +214,97 @@ public static class MarathonMode
             case 30: return "FYP Defense";
             case 40: return "Graduation Ceremony";
             default: return "Boss";
+        }
+    }
+
+    public static string MinibossNameForWave(int wave1Based)
+    {
+        switch (wave1Based)
+        {
+            case 5:  return "Pop Quiz";
+            case 15: return "Group Project";
+            case 25: return "Lab Report";
+            case 35: return "Oral Presentation";
+            default: return "Miniboss";
+        }
+    }
+
+    /// <summary>Assign ability sets to the four big bosses.
+    ///   Tier 1 (Midterm)    \u2014 Regen
+    ///   Tier 2 (Final)      \u2014 Teleport
+    ///   Tier 3 (FYP)        \u2014 Teleport + Enrage + Summon
+    ///   Tier 4 (Graduation) \u2014 ALL abilities, faster cadence
+    /// </summary>
+    static void ApplyBossAbilities(EnemyData boss, int tier, EnemyData minionTemplate)
+    {
+        boss.summonTemplate = minionTemplate;
+        switch (tier)
+        {
+            case 1:
+                boss.bossAbilities    = BossAbilityFlags.Regen;
+                boss.regenPerSecond   = Mathf.Max(8, boss.maxHealth / 80);
+                break;
+            case 2:
+                boss.bossAbilities    = BossAbilityFlags.Teleport;
+                boss.teleportInterval = 6f;
+                boss.teleportSkipWaypoints = 2;
+                break;
+            case 3:
+                boss.bossAbilities    = BossAbilityFlags.Teleport
+                                      | BossAbilityFlags.Enrage
+                                      | BossAbilityFlags.Summon;
+                boss.teleportInterval = 7f;
+                boss.teleportSkipWaypoints = 1;
+                boss.enrageHpThreshold = 0.5f;
+                boss.enrageSpeedMult   = 1.6f;
+                boss.summonInterval    = 9f;
+                boss.summonCount       = 2;
+                break;
+            default: // tier 4 (Graduation) and above
+                boss.bossAbilities    = BossAbilityFlags.Teleport
+                                      | BossAbilityFlags.Enrage
+                                      | BossAbilityFlags.Regen
+                                      | BossAbilityFlags.Summon;
+                boss.teleportInterval = 5f;
+                boss.teleportSkipWaypoints = 2;
+                boss.enrageHpThreshold = 0.6f;
+                boss.enrageSpeedMult   = 1.8f;
+                boss.regenPerSecond   = Mathf.Max(12, boss.maxHealth / 60);
+                boss.summonInterval   = 6f;
+                boss.summonCount      = 3;
+                break;
+        }
+    }
+
+    /// <summary>Assign a single ability to a miniboss based on its tier
+    /// (1: Pop Quiz \u2192 Regen, 2: Group Project \u2192 Teleport,
+    ///  3: Lab Report \u2192 Enrage, 4+: Oral Presentation \u2192 Summon + Teleport).</summary>
+    static void ApplyMinibossAbility(EnemyData mb, int tier)
+    {
+        switch (tier)
+        {
+            case 1:
+                mb.bossAbilities = BossAbilityFlags.Regen;
+                mb.regenPerSecond = Mathf.Max(4, mb.maxHealth / 120);
+                break;
+            case 2:
+                mb.bossAbilities = BossAbilityFlags.Teleport;
+                mb.teleportInterval = 7f;
+                mb.teleportSkipWaypoints = 1;
+                break;
+            case 3:
+                mb.bossAbilities = BossAbilityFlags.Enrage;
+                mb.enrageHpThreshold = 0.4f;
+                mb.enrageSpeedMult = 1.6f;
+                break;
+            default:
+                mb.bossAbilities = BossAbilityFlags.Teleport | BossAbilityFlags.Summon;
+                mb.teleportInterval = 8f;
+                mb.teleportSkipWaypoints = 1;
+                mb.summonInterval = 10f;
+                mb.summonCount = 2;
+                mb.summonTemplate = EnemyPool != null && EnemyPool.Length > 0 ? EnemyPool[0] : null;
+                break;
         }
     }
 
@@ -293,6 +407,16 @@ public static class MarathonMode
         c.shieldAuraRadius   = src.shieldAuraRadius;
         c.shieldAuraAmount   = src.shieldAuraAmount;
         c.shieldAuraInterval = src.shieldAuraInterval;
+        // Copy boss-ability defaults (callers may override after the clone).
+        c.bossAbilities         = src.bossAbilities;
+        c.teleportInterval      = src.teleportInterval;
+        c.teleportSkipWaypoints = src.teleportSkipWaypoints;
+        c.regenPerSecond        = src.regenPerSecond;
+        c.enrageHpThreshold     = src.enrageHpThreshold;
+        c.enrageSpeedMult       = src.enrageSpeedMult;
+        c.summonInterval        = src.summonInterval;
+        c.summonCount           = src.summonCount;
+        c.summonTemplate        = src.summonTemplate;
         return c;
     }
 }

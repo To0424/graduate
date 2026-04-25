@@ -278,6 +278,28 @@ public class GameplayAutoSetup : MonoBehaviour
         pauseBtnLabel = pBtn.GetComponentInChildren<TextMeshProUGUI>();
         pauseButton.onClick.AddListener(TogglePause);
 
+        // Speed toggle button (left of pause). Cycles 1x → 2x → 3x.
+        GameObject spdBtn = CreateButton(parent, "SpeedBtn", ">    1x", new Color(0.18f, 0.45f, 0.25f));
+        SetAnchored(spdBtn, new Vector2(0.70f, 0.06f), new Vector2(120, 50));
+        Button spdBtnComp = spdBtn.GetComponent<Button>();
+        TextMeshProUGUI spdLabel = spdBtn.GetComponentInChildren<TextMeshProUGUI>();
+        if (GameSpeedController.Instance == null)
+        {
+            var gsHost = new GameObject("--- GameSpeed ---");
+            gsHost.AddComponent<GameSpeedController>();
+        }
+        spdBtnComp.onClick.AddListener(() =>
+        {
+            GameSpeedController.Instance?.Cycle();
+            if (spdLabel != null)
+            {
+                float m = GameSpeedController.CurrentMultiplier;
+                if      (Mathf.Approximately(m, 1f)) spdLabel.text = ">    1x";
+                else if (Mathf.Approximately(m, 2f)) spdLabel.text = ">>   2x";
+                else                                  spdLabel.text = ">>>  3x";
+            }
+        });
+
         // Skill Tree button (top right, left of pause)
         GameObject stBtn = CreateButton(parent, "SkillTreeBtn", "Skill Tree", new Color(0.25f, 0.18f, 0.55f));
         SetAnchored(stBtn, new Vector2(0.88f, 0.96f), new Vector2(140, 40));

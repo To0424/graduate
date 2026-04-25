@@ -20,6 +20,12 @@ public class Enemy : MonoBehaviour
     // ── Shield Aura state ─────────────────────────────────────────────────────
     private float _auraTickTimer = 0f;
 
+    // ── Boss-ability state ────────────────────────────────────────────────────
+    private float _teleportTimer  = 0f;
+    private float _summonTimer    = 0f;
+    private float _regenAccum     = 0f;
+    private bool  _enrageTriggered = false;
+
     // ── Path ──────────────────────────────────────────────────────────────────
     private Transform[] waypoints;
     private int currentWaypointIndex = 0;
@@ -63,6 +69,12 @@ public class Enemy : MonoBehaviour
 
         // Reset aura tick timer for ShieldAura enemies.
         _auraTickTimer = data.archetype == EnemyArchetype.ShieldAura ? data.shieldAuraInterval : 0f;
+
+        // Reset boss-ability timers.
+        _teleportTimer   = data.teleportInterval;
+        _summonTimer     = data.summonInterval;
+        _regenAccum      = 0f;
+        _enrageTriggered = false;
 
         if (waypoints.Length > 0)
             transform.position = waypoints[0].position;
@@ -232,6 +244,120 @@ public class Enemy : MonoBehaviour
                 _auraTickTimer = data.shieldAuraInterval;
                 EmitShieldAuraTick();
             }
+        }
+
+        // Tick boss / miniboss abilities.
+        if (data.bossAbilities != BossAbilityFlags.None)
+            TickBossAbilities();
+    }
+
+    // ── Boss / Miniboss abilities ─────────────────────────────────────────────
+
+    void TickBossAbilities()
+    {
+        // Regen — heals over time.
+        if ((data.bossAbilities & BossAbilityFlags.Regen) != 0 && data.regenPerSecond > 0)
+        {
+            _regenAccum += data.regenPerSecond * Time.deltaTime;
+            int whole = Mathf.FloorToInt(_regenAccum);
+            if (whole > 0)
+            {
+                _regenAccum -= whole;
+                currentHealth = Mathf.Min(data.maxHealth, currentHealth + whole);
+                UpdateHPBar();
+            }
+        }
+
+        // Teleport — jumps forward along the path periodically.
+        if ((data.bossAbilities & BossAbilityFlags.Teleport) != 0
+            && data.teleportSkipWaypoints > 0)
+        {
+            _teleportTimer -= Time.deltaTime;
+            if (_teleportTimer <= 0f)
+            {
+                _teleportTimer = data.teleportInterval;
+                int target = Mathf.Min(waypoints.Length - 1,
+                                       currentWaypointIndex + data.teleportSkipWaypoints);
+                if (target > currentWaypointIndex)
+                {
+                    StartCoroutine(TeleportFlash());
+                    currentWaypointIndex = target;
+                    transform.position = waypoints[target].position;
+                }
+            }
+        }
+
+        // Enrage — one-shot speed buff at low HP.
+        if (!_enrageTriggered && (data.bossAbilities & BossAbilityFlags.Enrage) != 0)
+        {
+            float ratio = (float)currentHealth / Mathf.Max(1, data.maxHealth);
+            if (ratio <= data.enrageHpThreshold)
+            {
+                _enrageTriggered = true;
+                data = Instantiate(data); // private copy so we don't mutate the asset
+                data.moveSpeed *= data.enrageSpeedMult;
+                moveSpeed = data.moveSpeed * _slowMultiplier;
+                StartCoroutine(EnrageFlash());
+            }
+        }
+
+        // Summon — spawn N minions on its current position.
+        if ((data.bossAbilities & BossAbilityFlags.Summon) != 0 && data.summonTemplate != null)
+        {
+            _summonTimer -= Time.deltaTime;
+            if (_summonTimer <= 0f)
+            {
+                _summonTimer = data.summonInterval;
+                SpawnMinions();
+            }
+        }
+    }
+
+    System.Collections.IEnumerator TeleportFlash()
+    {
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        if (sr == null) yield break;
+        Color orig = sr.color;
+        sr.color = new Color(1f, 1f, 1f, 0.3f);
+        yield return new WaitForSeconds(0.15f);
+        if (sr != null) sr.color = orig;
+    }
+
+    System.Collections.IEnumerator EnrageFlash()
+    {
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        if (sr == null) yield break;
+        Color orig = sr.color;
+        for (int i = 0; i < 4; i++)
+        {
+            sr.color = new Color(1f, 0.3f, 0.3f);
+            yield return new WaitForSeconds(0.12f);
+            if (sr == null) yield break;
+            sr.color = orig;
+            yield return new WaitForSeconds(0.12f);
+        }
+    }
+
+    void SpawnMinions()
+    {
+        if (waypoints == null || waypoints.Length == 0) return;
+        // Reuse the standard enemy GameObject template so summoned minions
+        // travel the same path. They start at the boss's current waypoint.
+        for (int i = 0; i < data.summonCount; i++)
+        {
+            GameObject minionGO = new GameObject("Minion_" + data.summonTemplate.enemyName);
+            minionGO.transform.position = transform.position + new Vector3(
+                UnityEngine.Random.Range(-0.4f, 0.4f),
+                UnityEngine.Random.Range(-0.4f, 0.4f), 0f);
+            minionGO.AddComponent<SpriteRenderer>();
+            Enemy minion = minionGO.AddComponent<Enemy>();
+            // Build a sliced waypoint list starting from the current index so
+            // the minion continues from where the boss currently is.
+            int idx = Mathf.Clamp(currentWaypointIndex, 0, waypoints.Length - 1);
+            int len = waypoints.Length - idx;
+            Transform[] sliced = new Transform[len];
+            for (int k = 0; k < len; k++) sliced[k] = waypoints[idx + k];
+            minion.Initialize(data.summonTemplate, sliced);
         }
     }
 

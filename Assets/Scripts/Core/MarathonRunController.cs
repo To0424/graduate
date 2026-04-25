@@ -53,7 +53,7 @@ public class MarathonRunController : MonoBehaviour
     }
 
     /// <summary>Look for a user-supplied background image at
-    /// <c>Resources/MarathonBackground</c>. If present, fill the play area.</summary>
+    /// <c>Resources/MarathonBackground</c>. If present, fill the entire camera view.</summary>
     void TryInstallBackground()
     {
         Sprite sprite = Resources.Load<Sprite>("MarathonBackground");
@@ -69,17 +69,13 @@ public class MarathonRunController : MonoBehaviour
         GameObject bg = new GameObject("MarathonBackground");
         SpriteRenderer sr = bg.AddComponent<SpriteRenderer>();
         sr.sprite = sprite;
-        sr.color = new Color(1f, 1f, 1f, 0.55f); // translucent so paths/UI read on top
-        sr.sortingOrder = -10;
+        sr.color = new Color(1f, 1f, 1f, 0.85f);
+        sr.sortingOrder = -100;
 
-        // Map the world bounds we use for the marathon path: roughly x∈[-15,14], y∈[-6,6].
-        const float worldW = 30f;
-        const float worldH = 12f;
-        float spriteW = sprite.bounds.size.x;
-        float spriteH = sprite.bounds.size.y;
-        if (spriteW > 0f && spriteH > 0f)
-            bg.transform.localScale = new Vector3(worldW / spriteW, worldH / spriteH, 1f);
-        bg.transform.position = new Vector3(0f, 0f, 0f);
+        // Stretch to fill the entire camera view, with a generous overscan so
+        // panning never reveals the void at the edges.
+        bg.AddComponent<MarathonBackgroundFitter>();
+        bg.transform.position = new Vector3(0f, 0f, 5f);
     }
 
     void HandleRoundStart(int round0)

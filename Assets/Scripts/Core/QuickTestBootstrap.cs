@@ -713,11 +713,21 @@ public class QuickTestBootstrap : MonoBehaviour
     }
 
     /// <summary>
-    /// Marathon prototype map — a long horizontal campus layout shaped after
-    /// the HKU campus reference image. Three spawn points line the western
-    /// edge (only spawn 0 is active at the start; <c>MarathonRunController</c>
-    /// unlocks the others at waves 10 and 25). All three routes converge on a
-    /// single home base on the eastern edge.
+    /// Marathon prototype map — long horizontal HKU campus layout.
+    ///
+    /// HOW TO EDIT THIS MAP:
+    /// ─────────────────────
+    /// • Move spawn points by editing <see cref="PathPatternData.spawnPointPositions"/>.
+    /// • Reshape an enemy route by editing the corresponding entry of
+    ///   <see cref="PathPatternData.spawnWaypointPositions"/>. Each route is a
+    ///   list of waypoints starting at the spawn and ending at the home base.
+    /// • Add / remove tower spots by editing
+    ///   <see cref="PathPatternData.towerSlotPositions"/>.
+    /// • The world units used here roughly span x∈[-15,14], y∈[-7,7]. Camera
+    ///   orthographic size for marathon is 9 (set in GameplayAutoSetup).
+    /// • Spawn 0 (mid) is always active. Spawn 1 (top) unlocks at wave 10,
+    ///   spawn 2 (bottom) at wave 25 (see MarathonMode.ActiveSpawnCount).
+    ///   To change unlock thresholds, edit MarathonMode.ActiveSpawnCount.
     /// </summary>
     PathPatternData MakeMarathonPath()
     {
@@ -731,40 +741,47 @@ public class QuickTestBootstrap : MonoBehaviour
         p.spawnPointPositions = new Vector3[]
         {
             new Vector3(-14f,  0f,  0f),  // mid — active from wave 1
-            new Vector3(-14f,  4f,  0f),  // top — unlocks wave 10
-            new Vector3(-14f, -4f,  0f),  // bottom — unlocks wave 25
+            new Vector3(-14f,  5f,  0f),  // top — unlocks wave 10
+            new Vector3(-14f, -5f,  0f),  // bottom — unlocks wave 25
         };
 
         var chains = new PathPatternData.SpawnWaypoints[3];
-        // Mid route — main avenue down the middle of campus
+        // Mid route — main campus avenue, weaves slightly north then south
         chains[0] = new PathPatternData.SpawnWaypoints { positions = new Vector3[] {
             new Vector3(-14f,  0f, 0f),
-            new Vector3( -8f,  0f, 0f),
-            new Vector3( -3f,  1f, 0f),
-            new Vector3(  2f,  0f, 0f),
-            new Vector3(  7f,  1f, 0f),
+            new Vector3(-11f,  0f, 0f),
+            new Vector3( -8f,  1.5f, 0f),
+            new Vector3( -4f,  1.5f, 0f),
+            new Vector3( -1f,  0f, 0f),
+            new Vector3(  3f, -1f, 0f),
+            new Vector3(  6f,  0f, 0f),
+            new Vector3(  9f,  1f, 0f),
             new Vector3( 11f,  0f, 0f),
             home,
         }};
-        // Top route — the high road, looping around the upper buildings
+        // Top route — sweeps along the upper buildings, drops down to home
         chains[1] = new PathPatternData.SpawnWaypoints { positions = new Vector3[] {
-            new Vector3(-14f,  4f, 0f),
-            new Vector3( -9f,  4f, 0f),
-            new Vector3( -5f,  4f, 0f),
-            new Vector3(  0f,  4f, 0f),
-            new Vector3(  5f,  3f, 0f),
-            new Vector3(  9f,  2f, 0f),
+            new Vector3(-14f,  5f, 0f),
+            new Vector3(-10f,  5f, 0f),
+            new Vector3( -6f,  5.5f, 0f),
+            new Vector3( -2f,  5f, 0f),
+            new Vector3(  2f,  4.5f, 0f),
+            new Vector3(  5f,  3.5f, 0f),
+            new Vector3(  8f,  2.5f, 0f),
+            new Vector3( 10f,  1f, 0f),
             new Vector3( 11f,  0f, 0f),
             home,
         }};
-        // Bottom route — around the southern footpath
+        // Bottom route — long southern footpath that climbs to the home base
         chains[2] = new PathPatternData.SpawnWaypoints { positions = new Vector3[] {
-            new Vector3(-14f, -4f, 0f),
-            new Vector3( -9f, -4f, 0f),
-            new Vector3( -4f, -3f, 0f),
-            new Vector3(  1f, -2f, 0f),
-            new Vector3(  6f, -2f, 0f),
-            new Vector3(  9f, -1f, 0f),
+            new Vector3(-14f, -5f, 0f),
+            new Vector3(-10f, -5f, 0f),
+            new Vector3( -6f, -5.5f, 0f),
+            new Vector3( -2f, -5f, 0f),
+            new Vector3(  2f, -4f, 0f),
+            new Vector3(  5f, -3f, 0f),
+            new Vector3(  8f, -2f, 0f),
+            new Vector3( 10f, -1f, 0f),
             new Vector3( 11f,  0f, 0f),
             home,
         }};
@@ -772,19 +789,24 @@ public class QuickTestBootstrap : MonoBehaviour
         p.waypointPositions = chains[0].positions;
         p.exitPosition      = home;
 
-        // Tower slots scattered along the safe areas between routes.
+        // Tower slots — generous coverage spread across the campus.
         p.towerSlotPositions = new Vector3[]
         {
-            // Upper safe band (between top & mid routes)
-            new Vector3(-10f,  2f, 0f), new Vector3(-6f,  2f, 0f), new Vector3(-2f,  2.5f, 0f),
-            new Vector3( 2f,  2f, 0f), new Vector3( 6f,  2f, 0f),  new Vector3( 9f,  1f, 0f),
-            // Lower safe band (between mid & bottom routes)
-            new Vector3(-10f, -2f, 0f), new Vector3(-6f, -1.5f, 0f), new Vector3(-2f, -1f, 0f),
-            new Vector3( 2f, -1f, 0f), new Vector3( 6f, -0.5f, 0f), new Vector3( 9f, -1f, 0f),
-            // Approach to the home base — last line of defence
-            new Vector3(11.5f, 1.5f, 0f), new Vector3(11.5f, -1.5f, 0f),
-            // Outer flanks (off the paths)
-            new Vector3(-12f,  2f, 0f), new Vector3(-12f, -2f, 0f),
+            // ── Upper safe band (between top & mid routes) ────────────────
+            new Vector3(-12f,  3f, 0f), new Vector3( -9f,  3f, 0f), new Vector3( -6f,  3f, 0f),
+            new Vector3( -3f,  3f, 0f), new Vector3(  0f,  2.5f, 0f), new Vector3(  3f,  2.5f, 0f),
+            new Vector3(  6f,  2f, 0f), new Vector3(  9f,  3f, 0f),
+            // ── Lower safe band (between mid & bottom routes) ─────────────
+            new Vector3(-12f, -3f, 0f), new Vector3( -9f, -3f, 0f), new Vector3( -6f, -3f, 0f),
+            new Vector3( -3f, -3f, 0f), new Vector3(  0f, -2.5f, 0f), new Vector3(  3f, -2.5f, 0f),
+            new Vector3(  6f, -1f, 0f), new Vector3(  9f, -3f, 0f),
+            // ── Approach to the home base — last line of defence ──────────
+            new Vector3( 11.5f,  2f, 0f), new Vector3( 11.5f, -2f, 0f),
+            new Vector3( 12.5f,  1f, 0f), new Vector3( 12.5f, -1f, 0f),
+            // ── Outer flanks (defends the spawn approaches) ───────────────
+            new Vector3(-12f,  6f, 0f),  new Vector3(-12f, -6f, 0f),
+            new Vector3(  0f,  6f, 0f),  new Vector3(  0f, -6f, 0f),
+            new Vector3(  6f,  4.5f, 0f),new Vector3(  6f, -4.5f, 0f),
         };
         return p;
     }
