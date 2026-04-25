@@ -15,6 +15,14 @@ public class Tower : MonoBehaviour
     protected float fireTimer;
     protected Enemy targetEnemy;
 
+    // Temporary damage boost from EmpowerAllies hero skill
+    private float _tempDamageMult  = 1f;
+    private float _tempDamageTimer = 0f;
+
+    // ── Upgrade tracking ─────────────────────────────────────────────────────
+    public int path1Tier = 0;
+    public int path2Tier = 0;
+
     public virtual void Initialize(TowerData towerData, TowerSlot towerSlot)
     {
         data = towerData;
@@ -38,6 +46,75 @@ public class Tower : MonoBehaviour
         firePoint = transform.Find("FirePoint");
         if (firePoint == null)
             firePoint = transform;
+
+        // Heroes (towers with a HeroSkillData) get an active-skill component automatically.
+        if (data.heroSkill != null && GetComponent<HeroTower>() == null)
+        {
+            HeroTower hero = gameObject.AddComponent<HeroTower>();
+            hero.InitializeHero(data.heroSkill);
+        }
+    }
+
+    /// <summary>Buy an upgrade on path 1 or 2. Returns false if the next tier is unavailable.</summary>
+    public bool TryBuyUpgrade(int pathIndex)
+    {
+        if (data == null) return false;
+        TowerUpgrade[] path = pathIndex == 1 ? data.path1Upgrades : data.path2Upgrades;
+        int tier            = pathIndex == 1 ? path1Tier         : path2Tier;
+        if (path == null || tier >= path.Length) return false;
+
+        TowerUpgrade up = path[tier];
+        if (CurrencyManager.Instance == null || !CurrencyManager.Instance.SpendGold(up.cost)) return false;
+
+        currentDamage   = Mathf.RoundToInt(currentDamage * up.damageMultiplier) + up.bonusDamage;
+        currentRange    = currentRange    * up.rangeMultiplier   + up.bonusRange;
+        currentFireRate = currentFireRate * up.fireRateMultiplier + up.bonusFireRate;
+
+        if (pathIndex == 1) path1Tier++;
+        else                path2Tier++;
+
+        // Auto-evolve when a path reaches its evolution threshold.
+        TowerData evo  = pathIndex == 1 ? data.path1Evolution : data.path2Evolution;
+        int       trig = pathIndex == 1 ? data.path1EvolveAtTier : data.path2EvolveAtTier;
+        int       newTier = pathIndex == 1 ? path1Tier : path2Tier;
+        if (evo != null && newTier >= trig) EvolveTo(evo);
+        return true;
+    }
+
+    /// <summary>Replace this tower's TowerData with an evolved version (preserves slot and upgrade state).</summary>
+    public void EvolveTo(TowerData newData)
+    {
+        if (newData == null) return;
+        data = newData;
+        currentRange    = newData.range;
+        currentFireRate = newData.fireRate;
+        currentDamage   = newData.damage;
+        ApplySkillTreeBuffs();
+
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        if (sr != null)
+        {
+            sr.sprite = newData.sprite != null ? newData.sprite : RuntimeSprite.WhiteSquare;
+            if (newData.sprite == null) sr.color = GetTowerColor(newData.towerType);
+        }
+    }
+
+    /// <summary>Called by EmpowerAllies to temporarily increase this tower's shot damage.</summary>
+    public void ApplyTemporaryDamageBoost(float multiplier, float duration)
+    {
+        _tempDamageMult  = multiplier;
+        _tempDamageTimer = duration;
+
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        if (sr != null) StartCoroutine(EmpowerFlash(sr));
+    }
+
+    System.Collections.IEnumerator EmpowerFlash(SpriteRenderer sr)
+    {
+        Color original = sr.color;
+        sr.color = new Color(1f, 0.85f, 0.2f);
+        yield return new WaitForSeconds(_tempDamageTimer);
+        if (sr != null) sr.color = original;
     }
 
     public static Color GetTowerColor(TowerType type)
@@ -65,7 +142,19 @@ public class Tower : MonoBehaviour
     {
         fireTimer += Time.deltaTime;
 
-        if (targetEnemy == null || !IsInRange(targetEnemy))
+        // Tick temporary damage boost timer
+        if (_tempDamageTimer > 0f)
+        {
+            _tempDamageTimer -= Time.deltaTime;
+            if (_tempDamageTimer <= 0f)
+                _tempDamageMult = 1f;
+        }
+
+        // Detection towers reveal / conceal stealth enemies every frame
+        if (data != null && data.hasDetection)
+            HandleDetection();
+
+        if (targetEnemy == null || !IsInRange(targetEnemy) || !targetEnemy.IsTargetable())
         {
             targetEnemy = FindClosestEnemy();
         }
@@ -79,15 +168,27 @@ public class Tower : MonoBehaviour
         RotateTowardsTarget();
     }
 
+    void HandleDetection()
+    {
+        Enemy[] all = FindObjectsByType<Enemy>(FindObjectsSortMode.None);
+        foreach (Enemy e in all)
+        {
+            if (IsInRange(e)) e.Reveal();
+            // Note: Conceal() is called by DetectionRevealTracker on the enemy itself
+            // when no detection tower is in range — see comment in Enemy.cs.
+        }
+    }
+
     protected virtual void Shoot()
     {
         if (data.projectilePrefab == null || targetEnemy == null) return;
 
+        int boostedDamage = Mathf.RoundToInt(currentDamage * _tempDamageMult);
         GameObject projObj = Instantiate(data.projectilePrefab, firePoint.position, Quaternion.identity);
         Projectile proj = projObj.GetComponent<Projectile>();
         if (proj != null)
         {
-            proj.Initialize(targetEnemy, currentDamage);
+            proj.Initialize(targetEnemy, boostedDamage, data.damageType);
         }
     }
 
@@ -99,6 +200,7 @@ public class Tower : MonoBehaviour
 
         foreach (Enemy e in enemies)
         {
+            if (!e.IsTargetable()) continue;   // skip unrevealed Stealth enemies
             float dist = Vector3.Distance(transform.position, e.transform.position);
             if (dist <= currentRange && dist < closestDist)
             {

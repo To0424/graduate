@@ -41,4 +41,10 @@ public class LivesManager : MonoBehaviour
             OnAllLivesLost?.Invoke();
         }
     }
+
+    public void RestoreLives(int amount)
+    {
+        lives += amount;
+        OnLivesChanged?.Invoke(lives);
+    }
 }

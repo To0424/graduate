@@ -9,6 +9,19 @@ public class Waypoints : MonoBehaviour
     public Transform[] spawnPoints;
     public Transform exitPoint;
 
+    /// <summary>One waypoint chain per spawn (index-aligned with <see cref="spawnPoints"/>).
+    /// Set by <see cref="PathManager"/> when the active map provides per-spawn paths.</summary>
+    [System.NonSerialized] public Transform[][] perSpawnPaths;
+
+    /// <summary>Returns the waypoint chain enemies from the given spawn should follow.</summary>
+    public Transform[] GetPathFor(int spawnIndex)
+    {
+        if (perSpawnPaths != null && spawnIndex >= 0 && spawnIndex < perSpawnPaths.Length
+            && perSpawnPaths[spawnIndex] != null && perSpawnPaths[spawnIndex].Length > 0)
+            return perSpawnPaths[spawnIndex];
+        return points;
+    }
+
     void Awake()
     {
         // Only auto-collect if points weren't already set by PathManager

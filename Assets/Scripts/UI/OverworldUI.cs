@@ -18,6 +18,7 @@ public class OverworldUI : MonoBehaviour
     public Button skillTreeButton;
 
     private FacultyData selectedFaculty;
+    private SkillTreeUI _skillTreeUI;
 
     [System.Serializable]
     public class FacultyButton
@@ -48,7 +49,24 @@ public class OverworldUI : MonoBehaviour
                 fb.clearedBadge.SetActive(GameManager.Instance.IsFacultyCleared(fb.faculty));
         }
 
+        if (skillTreeButton != null)
+            skillTreeButton.onClick.AddListener(OpenSkillTree);
+
         UpdateInfoDisplay();
+    }
+
+    /// <summary>Builds (lazily) and opens the runtime Skill Tree overlay.</summary>
+    void OpenSkillTree()
+    {
+        if (_skillTreeUI == null)
+        {
+            Canvas canvas = GetComponentInParent<Canvas>();
+            if (canvas == null) canvas = FindAnyObjectByType<Canvas>();
+            if (canvas == null) { Debug.LogWarning("[OverworldUI] No Canvas found for SkillTreeUI."); return; }
+            _skillTreeUI = gameObject.AddComponent<SkillTreeUI>();
+            _skillTreeUI.Build(canvas.transform);
+        }
+        _skillTreeUI.Open();
     }
 
     void OnFacultyClicked(int index)

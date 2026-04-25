@@ -18,3 +18,6 @@ MonoBehaviour:
   goldReward: 15
   courseTier: 1
   sprite: {fileID: 0}
+  archetype: 0
+  shieldHealth: 0
+  bossScale: 2.5

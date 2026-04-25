@@ -59,16 +59,83 @@ public class GameplayAutoSetup : MonoBehaviour
     private TextMeshProUGUI creditsEarnedText;
     private TextMeshProUGUI spEarnedText;
 
+    // Skill tree
+    private SkillTreeUI skillTreeUI;
+    private Button skillTreeOpenButton;
+
     void Start()
     {
+        DeployedUniqueRegistry.Reset();
         CreateManagers();
+        EnsureTowerPrefabIsClickable();
         CreateCamera();
         CreateEventSystem();
         Canvas canvas = CreateCanvas();
         CreateHUD(canvas.transform);
-        CreateTowerShop(canvas.transform);
+        EnsureStarterAndUnlockedProfessors();
+        CreateBuildAndUpgradeUI(canvas);
+        CreateNormalTowerSidebar(canvas.transform);
+        CreateSkillTreeUI(canvas.transform);
         CreateGameOverUI(canvas.transform);
+        CreateHeroSkillUI(canvas.transform);
         SetupLevel();
+    }
+
+    void EnsureTowerPrefabIsClickable()
+    {
+        if (towerPrefab == null) return;
+        if (towerPrefab.GetComponent<Collider2D>() == null)
+        {
+            // Adding to a prefab GameObject in memory only affects this play session,
+            // which is what we want for runtime-built test scenes.
+            CircleCollider2D col = towerPrefab.AddComponent<CircleCollider2D>();
+            col.isTrigger = true;
+            col.radius    = 0.45f;
+        }
+    }
+
+    void CreateBuildAndUpgradeUI(Canvas canvas)
+    {
+        TowerPlacement.Instance?.SetTowerPrefab(towerPrefab != null ? towerPrefab.GetComponent<Tower>() : null);
+
+        GameObject bu = new GameObject("BuildAndUpgradeUI");
+        BuildAndUpgradeUI ui = bu.AddComponent<BuildAndUpgradeUI>();
+        Tower tp = towerPrefab != null ? towerPrefab.GetComponent<Tower>() : null;
+        ui.Build(canvas, availableTowers, tp);
+    }
+
+    /// <summary>
+    /// Restores the always-on left vertical sidebar of regular (non-professor)
+    /// towers, used to drag-place during the prep phase between rounds.
+    /// </summary>
+    void CreateNormalTowerSidebar(Transform parent)
+    {
+        if (availableTowers == null || availableTowers.Length == 0) return;
+
+        var regulars = new System.Collections.Generic.List<TowerData>();
+        foreach (TowerData td in availableTowers)
+        {
+            if (td == null) continue;
+            if (td.isProfessorTower) continue;
+            regulars.Add(td);
+        }
+        if (regulars.Count == 0) return;
+
+        BuildShopPanel(parent, "TowerShopPanel", "TOWERS",
+                       new Vector2(0f, 0f), new Vector2(0.10f, 0.85f),
+                       regulars, isProfessor: false);
+    }
+
+    /// <summary>
+    /// Builds an in-game Skill Tree window (initially hidden). Opened via the
+    /// "Skill Tree" button in the top bar. Useful when entering Gameplay
+    /// directly via QuickTestBootstrap (no Overworld).
+    /// </summary>
+    void CreateSkillTreeUI(Transform parent)
+    {
+        GameObject st = new GameObject("SkillTreeUI");
+        skillTreeUI = st.AddComponent<SkillTreeUI>();
+        skillTreeUI.Build(parent);
     }
 
     // ========== MANAGERS ==========
@@ -190,6 +257,12 @@ public class GameplayAutoSetup : MonoBehaviour
         pauseBtnLabel = pBtn.GetComponentInChildren<TextMeshProUGUI>();
         pauseButton.onClick.AddListener(TogglePause);
 
+        // Skill Tree button (top right, left of pause)
+        GameObject stBtn = CreateButton(parent, "SkillTreeBtn", "Skill Tree", new Color(0.25f, 0.18f, 0.55f));
+        SetAnchored(stBtn, new Vector2(0.88f, 0.96f), new Vector2(140, 40));
+        skillTreeOpenButton = stBtn.GetComponent<Button>();
+        skillTreeOpenButton.onClick.AddListener(() => skillTreeUI?.Open());
+
         // Pause overlay panel (hidden by default)
         CreatePausePanel(parent);
 
@@ -270,21 +343,121 @@ public class GameplayAutoSetup : MonoBehaviour
 
     // ========== TOWER SHOP ==========
 
+    /// <summary>
+    /// Make sure the shop always offers at least one hero the player can use
+    /// from level one (the "Self" starter), and any faculty professor towers
+    /// the player has already unlocked by clearing that faculty.
+    /// </summary>
+    void EnsureStarterAndUnlockedProfessors()
+    {
+        var list = new System.Collections.Generic.List<TowerData>();
+        if (availableTowers != null) list.AddRange(availableTowers);
+
+        // 1. Starter "Self" hero — always available
+        bool hasStarter = list.Exists(t => t != null && t.isProfessorTower && t.towerName == "Self (Player)");
+        if (!hasStarter)
+            list.Add(BuildStarterPlayerHero());
+
+        // 2. Unlocked faculty professors (only those configured with a hero skill)
+        if (GameManager.Instance != null && GameManager.Instance.allFaculties != null)
+        {
+            foreach (FacultyData f in GameManager.Instance.allFaculties)
+            {
+                if (f == null || f.professorTower == null) continue;
+                if (f.professorTower.heroSkill == null) continue;       // skip pre-hero-refactor profs
+                if (!GameManager.Instance.IsProfessorTowerUnlocked(f)) continue;
+                if (!list.Contains(f.professorTower))
+                    list.Add(f.professorTower);
+            }
+        }
+
+        availableTowers = list.ToArray();
+    }
+
+    private static TowerData _cachedStarterHero;
+
+    /// <summary>Creates (and caches) a free in-memory starter hero representing the player.</summary>
+    static TowerData BuildStarterPlayerHero()
+    {
+        if (_cachedStarterHero != null) return _cachedStarterHero;
+
+        HeroSkillData skill = ScriptableObject.CreateInstance<HeroSkillData>();
+        skill.skillName        = "Pep Talk";
+        skill.description      = "Briefly empowers towers in a wide circle (+50% damage).";
+        skill.cooldown         = 18f;
+        skill.effect           = HeroSkillEffect.EmpowerAllies;
+        skill.empowerMultiplier = 1.5f;
+        skill.empowerDuration  = 6f;
+        // Wider than a typical sniper tower so the Self hero can buff a small cluster.
+        skill.radius           = 5f;
+
+        TowerData td = ScriptableObject.CreateInstance<TowerData>();
+        td.towerName        = "Self (Player)";
+        td.towerType        = TowerType.Professor;
+        td.cost             = 0;          // free starter
+        td.range            = 0f;
+        td.fireRate         = 0f;
+        td.damage           = 0;
+        td.isProfessorTower = true;
+        td.heroSkill        = skill;
+        td.unique           = true;       // only one Self per level
+
+        _cachedStarterHero = td;
+        return td;
+    }
+
     void CreateTowerShop(Transform parent)
     {
+        // Always make sure the player has a starter hero ("Self") plus any
+        // professors unlocked via cleared faculties — even if the inspector
+        // list only contains regular towers.
+        EnsureStarterAndUnlockedProfessors();
+
         if (availableTowers == null || availableTowers.Length == 0) return;
 
-        // Shop panel (left side)
-        GameObject shopPanel = CreatePanel(parent, "TowerShopPanel", new Color(0, 0, 0, 0.5f));
+        // Split towers into regular and professor lists
+        var regularTowers  = new System.Collections.Generic.List<TowerData>();
+        var professorTowers = new System.Collections.Generic.List<TowerData>();
+        foreach (TowerData td in availableTowers)
+        {
+            if (td == null) continue;
+            if (td.isProfessorTower) professorTowers.Add(td);
+            else                    regularTowers.Add(td);
+        }
+
+        // ── Regular tower shop (left panel) ──────────────────────────────────
+        if (regularTowers.Count > 0)
+            BuildShopPanel(parent, "TowerShopPanel", "TOWERS",
+                           new Vector2(0f, 0f), new Vector2(0.12f, 0.9f),
+                           regularTowers, isProfessor: false);
+
+        // ── Professor shop (right panel, only if there are professors) ────────
+        if (professorTowers.Count > 0)
+            BuildShopPanel(parent, "ProfessorShopPanel", "HEROES",
+                           new Vector2(0.88f, 0f), new Vector2(1f, 0.9f),
+                           professorTowers, isProfessor: true);
+    }
+
+    void BuildShopPanel(Transform parent, string panelName, string title,
+                        Vector2 anchorMin, Vector2 anchorMax,
+                        System.Collections.Generic.List<TowerData> towers,
+                        bool isProfessor)
+    {
+        Color panelBg = isProfessor
+            ? new Color(0.10f, 0.07f, 0f, 0.55f)   // warm dark gold tint for heroes
+            : new Color(0f, 0f, 0f, 0.5f);
+
+        GameObject shopPanel = CreatePanel(parent, panelName, panelBg);
         RectTransform spRect = shopPanel.GetComponent<RectTransform>();
-        spRect.anchorMin = new Vector2(0, 0);
-        spRect.anchorMax = new Vector2(0.12f, 0.9f);
+        spRect.anchorMin = anchorMin;
+        spRect.anchorMax = anchorMax;
         spRect.sizeDelta = Vector2.zero;
         spRect.offsetMin = Vector2.zero;
         spRect.offsetMax = Vector2.zero;
 
         // Title
-        GameObject shopTitle = CreateText(shopPanel.transform, "ShopTitle", "TOWERS", 24, Color.white);
+        Color titleColor = isProfessor ? new Color(1f, 0.82f, 0.1f) : Color.white;
+        GameObject shopTitle = CreateText(shopPanel.transform, "ShopTitle", title, 22, titleColor);
         RectTransform stRect = shopTitle.GetComponent<RectTransform>();
         stRect.anchorMin = new Vector2(0, 0.92f);
         stRect.anchorMax = new Vector2(1, 1);
@@ -292,22 +465,40 @@ public class GameplayAutoSetup : MonoBehaviour
         stRect.offsetMin = Vector2.zero;
         stRect.offsetMax = Vector2.zero;
 
-        // Tower buttons
-        float yStep = 0.85f / Mathf.Max(availableTowers.Length, 1);
-        for (int i = 0; i < availableTowers.Length; i++)
+        // Subtitle for professors
+        if (isProfessor)
         {
-            int index = i;
-            TowerData td = availableTowers[i];
-            if (td == null) continue;
+            GameObject sub = CreateText(shopPanel.transform, "SubTitle", "place on\nbuilt tower", 13, new Color(0.8f, 0.7f, 0.4f));
+            RectTransform subRT = sub.GetComponent<RectTransform>();
+            subRT.anchorMin = new Vector2(0, 0.84f);
+            subRT.anchorMax = new Vector2(1, 0.93f);
+            subRT.sizeDelta = Vector2.zero;
+            subRT.offsetMin = Vector2.zero;
+            subRT.offsetMax = Vector2.zero;
+        }
 
-            Color btnColor = Tower.GetTowerColor(td.towerType) * 0.7f;
+        // Tower buttons
+        float startY     = isProfessor ? 0.82f : 0.88f;
+        float totalSpace = startY;
+        float yStep      = totalSpace / Mathf.Max(towers.Count, 1);
+
+        for (int i = 0; i < towers.Count; i++)
+        {
+            TowerData td = towers[i];
+            bool prof    = isProfessor;
+
+            Color btnColor = prof
+                ? new Color(0.55f, 0.38f, 0.05f)
+                : Tower.GetTowerColor(td.towerType) * 0.7f;
             btnColor.a = 1f;
+
             string label = $"{td.towerName}\n{td.cost}g";
+            if (prof && td.heroSkill != null)
+                label += $"\n{td.heroSkill.skillName}";
 
-            float yPos = 0.88f - (i * yStep);
+            float yPos = startY - (i * yStep);
 
-            // Create button relative to the shop panel
-            GameObject btn = CreateButton(shopPanel.transform, $"TowerBtn_{td.towerName}", label, btnColor);
+            GameObject btn = CreateButton(shopPanel.transform, $"Btn_{td.towerName}", label, btnColor);
             RectTransform btnRect = btn.GetComponent<RectTransform>();
             btnRect.anchorMin = new Vector2(0.05f, yPos - yStep + 0.02f);
             btnRect.anchorMax = new Vector2(0.95f, yPos);
@@ -315,27 +506,30 @@ public class GameplayAutoSetup : MonoBehaviour
             btnRect.offsetMin = Vector2.zero;
             btnRect.offsetMax = Vector2.zero;
 
-            // Font size adjustment
             TextMeshProUGUI tmpLabel = btn.GetComponentInChildren<TextMeshProUGUI>();
-            if (tmpLabel) tmpLabel.fontSize = 18;
+            if (tmpLabel) tmpLabel.fontSize = 16;
 
-            btn.GetComponent<Button>().onClick.AddListener(() => OnTowerSelected(td));
+            btn.GetComponent<Button>().onClick.AddListener(() => OnTowerSelected(td, prof));
         }
     }
 
-    void OnTowerSelected(TowerData data)
+    void OnTowerSelected(TowerData data, bool isProfessor)
     {
+        // Faculty-lock check (applies to both professors and regular unlockable towers)
         if (data.isProfessorTower)
         {
             FacultyData faculty = FindFacultyForTower(data);
             if (faculty != null && GameManager.Instance != null && !GameManager.Instance.IsProfessorTowerUnlocked(faculty))
             {
-                Debug.Log($"Professor tower locked! Clear all {faculty.facultyName} courses first.");
+                Debug.Log($"Professor locked! Clear all {faculty.facultyName} courses first.");
                 return;
             }
         }
 
-        TowerPlacement.Instance?.StartPlacing(data, towerPrefab.GetComponent<Tower>());
+        if (isProfessor)
+            TowerPlacement.Instance?.StartPlacing(data, towerPrefab.GetComponent<Tower>());
+        else
+            TowerPlacement.Instance?.StartPlacing(data, towerPrefab.GetComponent<Tower>());
     }
 
     FacultyData FindFacultyForTower(TowerData towerData)
@@ -443,6 +637,15 @@ public class GameplayAutoSetup : MonoBehaviour
                 graduationPanel.SetActive(true);
                 break;
         }
+    }
+
+    // ========== HERO SKILL UI ==========
+
+    void CreateHeroSkillUI(Transform parent)
+    {
+        GameObject heroUIObj = new GameObject("HeroSkillUI");
+        HeroSkillUI heroSkillUI = heroUIObj.AddComponent<HeroSkillUI>();
+        heroSkillUI.Build(parent);
     }
 
     // ========== LEVEL SETUP ==========

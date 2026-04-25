@@ -81,6 +81,41 @@ public class MainMenuSetup : MonoBehaviour
         quitRect.anchoredPosition = Vector2.zero;
         quitRect.sizeDelta = new Vector2(300, 70);
         quitBtn.GetComponent<Button>().onClick.AddListener(OnQuit);
+
+        // Testing Mode Button (developer shortcut)
+        GameObject testBtn = CreateButton(canvasObj.transform, "TestingModeButton",
+                                          "TESTING MODE", new Color(0.18f, 0.32f, 0.55f));
+        RectTransform testRect = testBtn.GetComponent<RectTransform>();
+        testRect.anchorMin = new Vector2(0.5f, 0.05f);
+        testRect.anchorMax = new Vector2(0.5f, 0.05f);
+        testRect.anchoredPosition = Vector2.zero;
+        testRect.sizeDelta = new Vector2(300, 50);
+        TextMeshProUGUI testLbl = testBtn.GetComponentInChildren<TextMeshProUGUI>();
+        if (testLbl != null) testLbl.fontSize = 22;
+        testBtn.GetComponent<Button>().onClick.AddListener(OnTestingMode);
+
+        // Map Creator Button (next to Testing Mode)
+        GameObject mapBtn = CreateButton(canvasObj.transform, "MapCreatorButton",
+                                          "MAP CREATOR", new Color(0.40f, 0.30f, 0.55f));
+        RectTransform mapRect = mapBtn.GetComponent<RectTransform>();
+        mapRect.anchorMin = new Vector2(0.5f, 0.05f);
+        mapRect.anchorMax = new Vector2(0.5f, 0.05f);
+        mapRect.anchoredPosition = new Vector2(330, 0);
+        mapRect.sizeDelta = new Vector2(300, 50);
+        TextMeshProUGUI mapLbl = mapBtn.GetComponentInChildren<TextMeshProUGUI>();
+        if (mapLbl != null) mapLbl.fontSize = 22;
+        mapBtn.GetComponent<Button>().onClick.AddListener(OnMapCreator);
+    }
+
+    void OnTestingMode()
+    {
+        // Open the settings panel; it calls TestingModeLauncher.Launch() when confirmed.
+        TestingModeSettingsPanel.Open();
+    }
+
+    void OnMapCreator()
+    {
+        MapCreator.LaunchOverlay();
     }
 
     void OnPlay()

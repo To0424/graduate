@@ -22,12 +22,76 @@ public class SkillTreeManager : MonoBehaviour
         else
         {
             Destroy(gameObject);
+            return;
         }
+
+        if (skillTreeData == null) skillTreeData = BuildPlaceholderTree();
     }
 
     void Start()
     {
         Load();
+    }
+
+    void OnEnable()  { WaveSpawner.OnRoundStart += HandleRoundStart; }
+    void OnDisable() { WaveSpawner.OnRoundStart -= HandleRoundStart; }
+
+    void HandleRoundStart(int _)
+    {
+        if (CurrencyManager.Instance == null) return;
+        BuffEffect buffs = GetTotalBuffs();
+        if (buffs.bonusGoldPerRound > 0)
+            CurrencyManager.Instance.AddGold(buffs.bonusGoldPerRound);
+    }
+
+    /// <summary>Built once if no SkillTreeData asset is provided. Lets the UI work in any scene.</summary>
+    static SkillTreeData BuildPlaceholderTree()
+    {
+        SkillTreeData d = ScriptableObject.CreateInstance<SkillTreeData>();
+        d.nodes = new SkillNode[]
+        {
+            // Social
+            new SkillNode {
+                nodeName = "Tutoring", description = "+10% tower damage.",
+                cost = 1, section = SkillSection.Social,
+                buff = new BuffEffect { damageMultiplier = 1.1f, rangeMultiplier = 1f, fireRateMultiplier = 1f },
+                prerequisiteNodeNames = new string[0]
+            },
+            new SkillNode {
+                nodeName = "Study Buddies", description = "+1 starting life.",
+                cost = 1, section = SkillSection.Social,
+                buff = new BuffEffect { bonusLives = 1 },
+                prerequisiteNodeNames = new string[] { "Tutoring" }
+            },
+            // Internship
+            new SkillNode {
+                nodeName = "Resume Polish", description = "+10% tower range.",
+                cost = 1, section = SkillSection.Internship,
+                buff = new BuffEffect { damageMultiplier = 1f, rangeMultiplier = 1.1f, fireRateMultiplier = 1f },
+                prerequisiteNodeNames = new string[0]
+            },
+            // Part-time Work
+            new SkillNode {
+                nodeName = "Cup of Coffee", description = "+20 gold at the start of every round.",
+                cost = 1, section = SkillSection.PartTimeWork,
+                buff = new BuffEffect { bonusGoldPerRound = 20 },
+                prerequisiteNodeNames = new string[0]
+            },
+            new SkillNode {
+                nodeName = "Part-time Cashier", description = "+50 starting gold.",
+                cost = 1, section = SkillSection.PartTimeWork,
+                buff = new BuffEffect { bonusStartGold = 50 },
+                prerequisiteNodeNames = new string[0]
+            },
+            // Certifications
+            new SkillNode {
+                nodeName = "Certified Sniper", description = "+10% fire rate.",
+                cost = 1, section = SkillSection.Certifications,
+                buff = new BuffEffect { damageMultiplier = 1f, rangeMultiplier = 1f, fireRateMultiplier = 1.1f },
+                prerequisiteNodeNames = new string[0]
+            }
+        };
+        return d;
     }
 
     public bool IsNodeUnlocked(string nodeName) => unlockedNodes.Contains(nodeName);

@@ -82,10 +82,10 @@ public class PathManager : MonoBehaviour
             sp.transform.SetParent(pathObj.transform);
             spawns[i] = sp.transform;
 
-            // Visual: green marker for spawn
+            // Visual: red marker for spawn (enemies come from here)
             SpriteRenderer sr = sp.AddComponent<SpriteRenderer>();
             sr.sprite = RuntimeSprite.Circle;
-            sr.color = Color.green;
+            sr.color = Color.red;
             sr.sortingOrder = 2;
             sp.transform.localScale = Vector3.one * 0.5f;
         }
@@ -97,15 +97,43 @@ public class PathManager : MonoBehaviour
         exitObj.transform.SetParent(pathObj.transform);
         wp.exitPoint = exitObj.transform;
 
-        // Visual: red marker for exit
+        // Visual: green marker for exit (the home base you defend)
         SpriteRenderer exitSR = exitObj.AddComponent<SpriteRenderer>();
         exitSR.sprite = RuntimeSprite.Circle;
-        exitSR.color = Color.red;
+        exitSR.color = Color.green;
         exitSR.sortingOrder = 2;
         exitObj.transform.localScale = Vector3.one * 0.5f;
 
         wp.points = waypointTransforms;
         currentWaypoints = wp;
+
+        // Per-spawn paths (custom maps may define a different waypoint chain
+        // for each spawn). When present, draw extra path lines so devs can
+        // see them, and store them on the Waypoints component for the spawner.
+        if (pattern.spawnWaypointPositions != null && pattern.spawnWaypointPositions.Length > 0)
+        {
+            wp.perSpawnPaths = new Transform[pattern.spawnWaypointPositions.Length][];
+            for (int s = 0; s < pattern.spawnWaypointPositions.Length; s++)
+            {
+                var chain = pattern.spawnWaypointPositions[s];
+                if (chain == null || chain.positions == null || chain.positions.Length == 0)
+                {
+                    wp.perSpawnPaths[s] = waypointTransforms;
+                    continue;
+                }
+                Transform[] tArr = new Transform[chain.positions.Length];
+                for (int j = 0; j < chain.positions.Length; j++)
+                {
+                    GameObject pt = new GameObject($"Spawn{s}_WP{j}");
+                    pt.transform.position = chain.positions[j];
+                    pt.transform.SetParent(pathObj.transform);
+                    tArr[j] = pt.transform;
+                }
+                for (int j = 0; j < tArr.Length - 1; j++)
+                    CreatePathLine(pathObj.transform, tArr[j].position, tArr[j + 1].position, 1000 + s * 100 + j);
+                wp.perSpawnPaths[s] = tArr;
+            }
+        }
 
         // Create tower slots with visible squares
         currentTowerSlots = new TowerSlot[pattern.towerSlotPositions.Length];
@@ -125,6 +153,11 @@ public class PathManager : MonoBehaviour
             sr.color = new Color(0.3f, 0.5f, 0.8f, 0.6f);
             sr.sortingOrder = 2;
             slotObj.transform.localScale = Vector3.one * 0.7f;
+
+            // Click target for the radial build menu
+            BoxCollider2D col = slotObj.AddComponent<BoxCollider2D>();
+            col.isTrigger = true;
+            col.size = Vector2.one;
 
             currentTowerSlots[i] = slot;
         }

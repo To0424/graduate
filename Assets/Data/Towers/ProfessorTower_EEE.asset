@@ -22,3 +22,6 @@ MonoBehaviour:
   projectilePrefab: {fileID: 6494951758032652225, guid: 70bc960740b99bb4cadc1be31db12052, type: 3}
   isProfessorTower: 1
   requiredFaculty: EEE
+  damageType: 0
+  hasDetection: 0
+  heroSkill: {fileID: 0}

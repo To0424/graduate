@@ -19,6 +19,7 @@ public class OverworldSetup : MonoBehaviour
     private TextMeshProUGUI creditsText;
     private TextMeshProUGUI skillPointsText;
     private FacultyData selectedFaculty;
+    private SkillTreeUI skillTreeUI;
 
     void Start()
     {
@@ -44,6 +45,10 @@ public class OverworldSetup : MonoBehaviour
         scaler.referenceResolution = new Vector2(1920, 1080);
         canvasObj.AddComponent<GraphicRaycaster>();
 
+        // Build the Skill Tree overlay (hidden until the button is clicked)
+        skillTreeUI = gameObject.AddComponent<SkillTreeUI>();
+        skillTreeUI.Build(canvasObj.transform);
+
         // Background
         GameObject bg = CreatePanel(canvasObj.transform, "Background", new Color(0.12f, 0.18f, 0.12f, 1f));
         StretchFull(bg);
@@ -65,7 +70,7 @@ public class OverworldSetup : MonoBehaviour
         // Skill Tree button
         GameObject stBtn = CreateButton(canvasObj.transform, "SkillTreeBtn", "Skill Tree", new Color(0.4f, 0.2f, 0.6f));
         SetAnchored(stBtn, new Vector2(0.85f, 0.85f), new Vector2(200, 50));
-        stBtn.GetComponent<Button>().onClick.AddListener(() => Debug.Log("Skill Tree UI — coming soon!"));
+        stBtn.GetComponent<Button>().onClick.AddListener(() => skillTreeUI.Open());
 
         // Back to Menu button
         GameObject backBtn = CreateButton(canvasObj.transform, "BackBtn", "< Main Menu", new Color(0.4f, 0.4f, 0.4f));
