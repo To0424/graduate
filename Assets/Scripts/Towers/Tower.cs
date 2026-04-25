@@ -125,17 +125,28 @@ public class Tower : MonoBehaviour
             case TowerType.Balanced: return new Color(0.3f, 0.6f, 1.0f); // blue
             case TowerType.Sniper:   return new Color(0.8f, 0.3f, 0.8f); // purple
             case TowerType.Professor:return new Color(1.0f, 0.7f, 0.1f); // gold
+            case TowerType.Cannon:   return new Color(0.95f, 0.45f, 0.1f); // orange
+            case TowerType.Frost:    return new Color(0.55f, 0.85f, 1.0f); // ice-blue
             default:                 return Color.white;
         }
     }
 
     void ApplySkillTreeBuffs()
     {
-        if (SkillTreeManager.Instance == null) return;
-        BuffEffect buffs = SkillTreeManager.Instance.GetTotalBuffs();
-        currentDamage = Mathf.RoundToInt(data.damage * buffs.damageMultiplier);
-        currentRange = data.range * buffs.rangeMultiplier;
-        currentFireRate = data.fireRate * buffs.fireRateMultiplier;
+        BuffEffect total = new BuffEffect();
+        if (SkillTreeManager.Instance != null) total.AddBuff(SkillTreeManager.Instance.GetTotalBuffs());
+        if (RunBuffs.Instance != null)        total.AddBuff(RunBuffs.Instance.stats);
+        currentDamage   = Mathf.RoundToInt(data.damage * total.damageMultiplier);
+        currentRange    = data.range    * total.rangeMultiplier;
+        currentFireRate = data.fireRate * total.fireRateMultiplier;
+    }
+
+    /// <summary>Re-apply skill-tree + run-buff stats to every tower currently
+    /// placed. Called by RunBuffs.Apply when a marathon buff is picked.</summary>
+    public static void RefreshAllStats()
+    {
+        Tower[] all = FindObjectsByType<Tower>(FindObjectsSortMode.None);
+        foreach (Tower t in all) if (t != null) t.ApplySkillTreeBuffs();
     }
 
     void Update()
@@ -188,7 +199,9 @@ public class Tower : MonoBehaviour
         Projectile proj = projObj.GetComponent<Projectile>();
         if (proj != null)
         {
-            proj.Initialize(targetEnemy, boostedDamage, data.damageType);
+            proj.Initialize(targetEnemy, boostedDamage, data.damageType,
+                            data.splashRadius, data.splashDamageFraction,
+                            data.slowOnHitMultiplier, data.slowOnHitDuration);
         }
     }
 

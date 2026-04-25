@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+// Marathon mode hook is in this same global namespace.
 
 /// <summary>
 /// Drop this on an empty GameObject in the Gameplay scene.
@@ -182,8 +183,8 @@ public class GameplayAutoSetup : MonoBehaviour
             camObj.AddComponent<AudioListener>();
         }
 
-        // Add (or refresh) pan + zoom controls. Endless mode wants a wider
-        // initial zoom so the player can see the full multi-home map.
+        // Add (or refresh) pan + zoom controls. Endless / Marathon want a
+        // wider initial zoom so the player can see the full campus-shaped map.
         Camera mainCam = Camera.main;
         if (mainCam.GetComponent<CameraController>() == null)
             mainCam.gameObject.AddComponent<CameraController>();
@@ -193,6 +194,13 @@ public class GameplayAutoSetup : MonoBehaviour
             CameraController cc = mainCam.GetComponent<CameraController>();
             cc.maxOrthoSize = 22f;
             cc.minOrthoSize = 5f;
+        }
+        else if (MarathonMode.IsActive)
+        {
+            mainCam.orthographicSize = 9f;
+            CameraController cc = mainCam.GetComponent<CameraController>();
+            cc.maxOrthoSize = 16f;
+            cc.minOrthoSize = 4f;
         }
     }
 
@@ -693,6 +701,15 @@ public class GameplayAutoSetup : MonoBehaviour
             waveSpawner.isEndless = true;
             waveSpawner.nextWaveProvider = EndlessMode.GenerateWave;
         }
+        else if (MarathonMode.IsActive)
+        {
+            // Marathon uses the same provider hook but the generator returns
+            // null after wave 40, which causes WaveSpawner to raise
+            // OnAllRoundsComplete and end the run cleanly.
+            waveSpawner.isEndless = true;
+            waveSpawner.nextWaveProvider = round =>
+                round >= MarathonMode.TOTAL_WAVES ? null : MarathonMode.GenerateWave(round);
+        }
 
         // Apply classroom background if assigned
         if (level.classroomBackground != null)
@@ -724,6 +741,7 @@ public class GameplayAutoSetup : MonoBehaviour
 
         // Endless run is always tied to the gameplay scene's lifetime.
         if (EndlessMode.IsActive) EndlessMode.EndRun();
+        if (MarathonMode.IsActive) MarathonMode.EndRun();
     }
 
     // ========== UI HELPERS ==========

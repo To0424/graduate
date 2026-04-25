@@ -5,7 +5,9 @@ public enum TowerType
     Rapid,
     Balanced,
     Sniper,
-    Professor
+    Professor,
+    Cannon,    // AOE splash damage on hit
+    Frost      // small splash + slows enemies on hit
 }
 
 public enum DamageType
@@ -39,6 +41,18 @@ public class TowerData : ScriptableObject
     [Header("Detection")]
     [Tooltip("When true, this tower reveals nearby Stealth enemies within its range.")]
     public bool hasDetection = false;
+
+    [Header("Splash / AOE on Hit")]
+    [Tooltip("If > 0, projectiles deal damage to all enemies within this radius of the impact.")]
+    public float splashRadius = 0f;
+    [Tooltip("Damage applied to non-primary targets caught in the splash, as a fraction of base damage.")]
+    [Range(0f, 1f)] public float splashDamageFraction = 0.6f;
+
+    [Header("Slow on Hit")]
+    [Tooltip("Speed multiplier applied to enemies hit (and splashed). 1 = no slow, 0.5 = half speed.")]
+    [Range(0.1f, 1f)] public float slowOnHitMultiplier = 1f;
+    [Tooltip("Duration in seconds of the on-hit slow.")]
+    public float slowOnHitDuration = 0f;
 
     [Header("Hero Skill (Professor only)")]
     [Tooltip("Assign a HeroSkillData asset to make this tower a Hero with an active skill.")]

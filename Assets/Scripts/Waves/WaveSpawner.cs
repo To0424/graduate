@@ -141,6 +141,28 @@ public class WaveSpawner : MonoBehaviour
         // counted the whole wave at the start of the round.
     }
 
+    /// <summary>Spawn split-enemies in place when a Splitter dies. Each child
+    /// inherits the parent's path and starts at the parent's current waypoint
+    /// index so it doesn't snap back to the spawn. Counts toward the
+    /// remaining-enemies HUD as additional work for the round.</summary>
+    public void SpawnSplit(EnemyData childData, Vector3 position, Transform[] path, int waypointIndex, int count)
+    {
+        if (childData == null || enemyPrefab == null) return;
+        for (int i = 0; i < count; i++)
+        {
+            // Slight scatter so the children don't perfectly overlap.
+            Vector3 jitter = new Vector3((i - (count - 1) * 0.5f) * 0.35f, 0f, 0f);
+            GameObject obj = Instantiate(enemyPrefab, position + jitter, Quaternion.identity);
+            Enemy child = obj.GetComponent<Enemy>();
+            child.Initialize(childData, path);
+            child.transform.position = position + jitter;
+            child.SetWaypointIndex(Mathf.Max(0, waypointIndex));
+            enemiesAlive++;
+            enemiesRemainingThisRound++;
+        }
+        OnEnemyCountChanged?.Invoke(enemiesRemainingThisRound);
+    }
+
     void HandleEnemyRemoved(Enemy enemy)
     {
         enemiesAlive = Mathf.Max(0, enemiesAlive - 1);

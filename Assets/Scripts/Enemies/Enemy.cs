@@ -17,6 +17,9 @@ public class Enemy : MonoBehaviour
     private float _slowMultiplier = 1f;
     private float _slowTimer      = 0f;
 
+    // ── Shield Aura state ─────────────────────────────────────────────────────
+    private float _auraTickTimer = 0f;
+
     // ── Path ──────────────────────────────────────────────────────────────────
     private Transform[] waypoints;
     private int currentWaypointIndex = 0;
@@ -52,10 +55,14 @@ public class Enemy : MonoBehaviour
 
         ApplyArchetypeVisuals();
         CreateHPBar();
-        if (data.archetype == EnemyArchetype.Shielded && data.shieldHealth > 0)
+        if ((data.archetype == EnemyArchetype.Shielded && data.shieldHealth > 0) ||
+            data.archetype == EnemyArchetype.ShieldAura)
             CreateShieldBar();
         if (data.archetype == EnemyArchetype.Stealth)
             gameObject.AddComponent<DetectionRevealTracker>();
+
+        // Reset aura tick timer for ShieldAura enemies.
+        _auraTickTimer = data.archetype == EnemyArchetype.ShieldAura ? data.shieldAuraInterval : 0f;
 
         if (waypoints.Length > 0)
             transform.position = waypoints[0].position;
@@ -89,7 +96,31 @@ public class Enemy : MonoBehaviour
                 transform.localScale = Vector3.one * data.bossScale;
                 CreateBossLabel();
                 break;
+
+            case EnemyArchetype.Splitter:
+                // Distinct yellow-orange so the player can plan splash hits.
+                if (data.sprite == null) sr.color = new Color(1f, 0.65f, 0.15f);
+                break;
+
+            case EnemyArchetype.ShieldAura:
+                // Greenish-blue: support unit telegraphing the aura.
+                if (data.sprite == null) sr.color = new Color(0.4f, 0.85f, 0.7f);
+                CreateAuraRing();
+                break;
         }
+    }
+
+    void CreateAuraRing()
+    {
+        // A faint ring drawn around the aura unit so the player can see its range.
+        GameObject ring = new GameObject("AuraRing");
+        ring.transform.SetParent(transform);
+        ring.transform.localPosition = Vector3.zero;
+        SpriteRenderer rsr = ring.AddComponent<SpriteRenderer>();
+        rsr.sprite = RuntimeSprite.Circle;
+        rsr.color = new Color(0.4f, 0.85f, 0.7f, 0.18f);
+        rsr.sortingOrder = 0;
+        ring.transform.localScale = Vector3.one * data.shieldAuraRadius * 2f;
     }
 
     void CreateBossLabel()
@@ -154,7 +185,10 @@ public class Enemy : MonoBehaviour
     void UpdateShieldBar()
     {
         if (shieldBarFill == null) return;
-        float ratio = Mathf.Clamp01((float)currentShield / data.shieldHealth);
+        // Use the larger of the data's shield max OR the current shield value
+        // so aura-granted shields scale the bar visibly without ever exceeding it.
+        int denom = Mathf.Max(1, Mathf.Max(data.shieldHealth, currentShield));
+        float ratio = Mathf.Clamp01((float)currentShield / denom);
         shieldBarFill.transform.localScale    = new Vector3(BAR_WIDTH * ratio, BAR_HEIGHT, 1f);
         float offset = BAR_WIDTH * (1f - ratio) * -0.5f;
         shieldBarFill.transform.localPosition = new Vector3(offset, SHIELD_BAR_Y, 0);
@@ -185,8 +219,55 @@ public class Enemy : MonoBehaviour
 
         MoveAlongPath();
         UpdateHPBar();
-        if (data.archetype == EnemyArchetype.Shielded && data.shieldHealth > 0)
+        if (((data.archetype == EnemyArchetype.Shielded && data.shieldHealth > 0) ||
+             data.archetype == EnemyArchetype.ShieldAura) && shieldBarFill != null)
             UpdateShieldBar();
+
+        // Tick shield aura.
+        if (data.archetype == EnemyArchetype.ShieldAura)
+        {
+            _auraTickTimer -= Time.deltaTime;
+            if (_auraTickTimer <= 0f)
+            {
+                _auraTickTimer = data.shieldAuraInterval;
+                EmitShieldAuraTick();
+            }
+        }
+    }
+
+    void EmitShieldAuraTick()
+    {
+        Enemy[] all = FindObjectsByType<Enemy>(FindObjectsSortMode.None);
+        bool buffedAnyone = false;
+        foreach (Enemy e in all)
+        {
+            if (e == this || e._isDead) continue;
+            if (Vector3.Distance(e.transform.position, transform.position) > data.shieldAuraRadius) continue;
+            e.ReceiveAuraShield(data.shieldAuraAmount);
+            buffedAnyone = true;
+        }
+        if (buffedAnyone) StartCoroutine(AuraFlash());
+    }
+
+    System.Collections.IEnumerator AuraFlash()
+    {
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        if (sr == null) yield break;
+        Color orig = sr.color;
+        sr.color = Color.white;
+        yield return new WaitForSeconds(0.12f);
+        if (sr != null) sr.color = orig;
+    }
+
+    /// <summary>Add temporary shield HP from a friendly Shield-Aura enemy.
+    /// Uses the same shield bar as the Shielded archetype, so a normal enemy
+    /// becomes briefly shielded while an aura is active.</summary>
+    public void ReceiveAuraShield(int amount)
+    {
+        if (_isDead) return;
+        if (currentShield <= 0 && shieldBarFill == null) CreateShieldBar();
+        currentShield += amount;
+        UpdateShieldBar();
     }
 
     void MoveAlongPath()
@@ -262,11 +343,14 @@ public class Enemy : MonoBehaviour
     {
         if (_isDead) return;
 
-        if (data.archetype == EnemyArchetype.Shielded &&
-            currentShield > 0                         &&
-            type != DamageType.Pierce)
+        // Shield absorbs the hit when the enemy is Shielded OR currently has
+        // aura-granted shield HP. Pierce always bypasses.
+        bool hasShield = currentShield > 0 &&
+                         (data.archetype == EnemyArchetype.Shielded ||
+                          data.archetype == EnemyArchetype.ShieldAura ||
+                          shieldBarFill != null);
+        if (hasShield && type != DamageType.Pierce)
         {
-            // Shield absorbs the hit
             currentShield -= damage;
             if (currentShield < 0) currentShield = 0;
             return;
@@ -291,6 +375,12 @@ public class Enemy : MonoBehaviour
         if (data.archetype == EnemyArchetype.Boss)
             OnBossDefeated?.Invoke(this);
 
+        // Splitter: spawn smaller copies that continue along this enemy's path.
+        if (data.archetype == EnemyArchetype.Splitter && data.splitInto != null && WaveSpawner.Instance != null)
+        {
+            WaveSpawner.Instance.SpawnSplit(data.splitInto, transform.position, waypoints, currentWaypointIndex, data.splitCount);
+        }
+
         Destroy(gameObject);
     }
 
@@ -314,5 +404,13 @@ public class Enemy : MonoBehaviour
         for (int i = currentWaypointIndex; i < waypoints.Length - 1; i++)
             dist += Vector3.Distance(waypoints[i].position, waypoints[i + 1].position);
         return dist;
+    }
+
+    /// <summary>Used by split-spawned enemies so they continue along the
+    /// parent's path instead of restarting at the beginning.</summary>
+    public void SetWaypointIndex(int index)
+    {
+        if (waypoints == null) return;
+        currentWaypointIndex = Mathf.Clamp(index, 0, waypoints.Length - 1);
     }
 }

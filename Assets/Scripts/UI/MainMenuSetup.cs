@@ -117,6 +117,23 @@ public class MainMenuSetup : MonoBehaviour
         TextMeshProUGUI endLbl = endlessBtn.GetComponentInChildren<TextMeshProUGUI>();
         if (endLbl != null) endLbl.fontSize = 22;
         endlessBtn.GetComponent<Button>().onClick.AddListener(OnEndlessMode);
+
+        // Marathon Mode Button (above the others — flagship 40-wave run).
+        GameObject marathonBtn = CreateButton(canvasObj.transform, "MarathonModeButton",
+                                              "MARATHON (40 WAVES)", new Color(0.85f, 0.45f, 0.1f));
+        RectTransform mRect = marathonBtn.GetComponent<RectTransform>();
+        mRect.anchorMin = new Vector2(0.5f, 0.13f);
+        mRect.anchorMax = new Vector2(0.5f, 0.13f);
+        mRect.anchoredPosition = Vector2.zero;
+        mRect.sizeDelta = new Vector2(360, 56);
+        TextMeshProUGUI mLbl = marathonBtn.GetComponentInChildren<TextMeshProUGUI>();
+        if (mLbl != null) mLbl.fontSize = 24;
+        marathonBtn.GetComponent<Button>().onClick.AddListener(OnMarathonMode);
+    }
+
+    void OnMarathonMode()
+    {
+        MarathonMode.Launch();
     }
 
     void OnEndlessMode()
