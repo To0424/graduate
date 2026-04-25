@@ -134,9 +134,12 @@ public class QuickTestBootstrap : MonoBehaviour
                 mc.AddComponent<MarathonRunController>();
             }
             MarathonMode.BuffPool = MakeBuffPool(towers, projectilePrefab);
+            // Marathon starts with cannon AND frost unlocked — every regular
+            // tower is offered in the side shop from round 1.
             Debug.Log($"[Marathon] Bootstrapped \u2014 path '{path.patternName}', " +
                       $"{MarathonMode.SpawnPointCount} spawns defined, " +
-                      $"{MarathonMode.BuffPool.Count} buff offers in pool.");
+                      $"{MarathonMode.BuffPool.Count} buff offers in pool, " +
+                      $"{towers.Length} starter towers (cannon/frost included).");
         }
 
         // 4. Tell GameManager which level to run
@@ -447,6 +450,9 @@ public class QuickTestBootstrap : MonoBehaviour
         frost.slowOnHitMultiplier  = 0.5f;
         frost.slowOnHitDuration    = 2f;
 
+        // Wire upgrade paths + capstone perks for each regular tower.
+        AssignTowerUpgrades(rapid, balanced, sniper, cannon, frost);
+
         if (!withProfessor)
             return new TowerData[] { rapid, balanced, sniper, cannon, frost };
 
@@ -725,9 +731,9 @@ public class QuickTestBootstrap : MonoBehaviour
     ///   <see cref="PathPatternData.towerSlotPositions"/>.
     /// • The world units used here roughly span x∈[-15,14], y∈[-7,7]. Camera
     ///   orthographic size for marathon is 9 (set in GameplayAutoSetup).
-    /// • Spawn 0 (mid) is always active. Spawn 1 (top) unlocks at wave 10,
-    ///   spawn 2 (bottom) at wave 25 (see MarathonMode.ActiveSpawnCount).
-    ///   To change unlock thresholds, edit MarathonMode.ActiveSpawnCount.
+    /// • Spawn 0 (left mid avenue) is always active. The remaining 5 spawns
+    ///   unlock at waves 5, 10, 15, 25, and 35 — see
+    ///   MarathonMode.ActiveSpawnCount to change unlock thresholds.
     /// </summary>
     PathPatternData MakeMarathonPath()
     {
@@ -735,78 +741,106 @@ public class QuickTestBootstrap : MonoBehaviour
         p.patternName    = "Marathon Campus";
         p.difficultyTier = 2;
 
-        Vector3 home = new Vector3(13f, 0f, 0f);
+        // Home base sits just left of centre. Two western paths (active early)
+        // converge here from the left; four eastern routes (unlocked later)
+        // branch in from the right side.
+        Vector3 home = new Vector3(1f, -1f, 0f);
 
-        // Three western entrances (top / centre / bottom).
+        // Six entrances. Spawn 0 (left mid avenue) is always active. The
+        // others unlock progressively — see MarathonMode.ActiveSpawnCount.
         p.spawnPointPositions = new Vector3[]
         {
-            new Vector3(-14f,  0f,  0f),  // mid — active from wave 1
-            new Vector3(-14f,  5f,  0f),  // top — unlocks wave 10
-            new Vector3(-14f, -5f,  0f),  // bottom — unlocks wave 25
+            new Vector3(-14f,  1f,  0f),  // 0 left-mid avenue (always active)
+            new Vector3( -9f,  6f,  0f),  // 1 top-left            unlocks wave 5
+            new Vector3( 13f,  4f,  0f),  // 2 right-mid upper     unlocks wave 10
+            new Vector3(  8f,  6f,  0f),  // 3 top-right           unlocks wave 15
+            new Vector3( 14f, -1f,  0f),  // 4 right-mid lower     unlocks wave 25
+            new Vector3( 10f, -6f,  0f),  // 5 bottom-right        unlocks wave 35
         };
 
-        var chains = new PathPatternData.SpawnWaypoints[3];
-        // Mid route — main campus avenue, weaves slightly north then south
+        var chains = new PathPatternData.SpawnWaypoints[6];
+
+        // 0 — Left mid avenue: long horizontal sweep that hooks down to home
         chains[0] = new PathPatternData.SpawnWaypoints { positions = new Vector3[] {
-            new Vector3(-14f,  0f, 0f),
-            new Vector3(-11f,  0f, 0f),
+            new Vector3(-14f,  1f, 0f),
+            new Vector3(-11f,  1f, 0f),
             new Vector3( -8f,  1.5f, 0f),
-            new Vector3( -4f,  1.5f, 0f),
-            new Vector3( -1f,  0f, 0f),
-            new Vector3(  3f, -1f, 0f),
-            new Vector3(  6f,  0f, 0f),
-            new Vector3(  9f,  1f, 0f),
-            new Vector3( 11f,  0f, 0f),
+            new Vector3( -5f,  1f, 0f),
+            new Vector3( -2f,  0f, 0f),
             home,
         }};
-        // Top route — sweeps along the upper buildings, drops down to home
+
+        // 1 — Top-left: drops south, then east to merge into the mid avenue
         chains[1] = new PathPatternData.SpawnWaypoints { positions = new Vector3[] {
-            new Vector3(-14f,  5f, 0f),
-            new Vector3(-10f,  5f, 0f),
-            new Vector3( -6f,  5.5f, 0f),
-            new Vector3( -2f,  5f, 0f),
-            new Vector3(  2f,  4.5f, 0f),
-            new Vector3(  5f,  3.5f, 0f),
-            new Vector3(  8f,  2.5f, 0f),
-            new Vector3( 10f,  1f, 0f),
-            new Vector3( 11f,  0f, 0f),
+            new Vector3( -9f,  6f, 0f),
+            new Vector3( -9f,  4f, 0f),
+            new Vector3( -7f,  3f, 0f),
+            new Vector3( -4f,  2f, 0f),
+            new Vector3( -1f,  0.5f, 0f),
             home,
         }};
-        // Bottom route — long southern footpath that climbs to the home base
+
+        // 2 — Right-mid upper: cuts in past the upper buildings
         chains[2] = new PathPatternData.SpawnWaypoints { positions = new Vector3[] {
-            new Vector3(-14f, -5f, 0f),
-            new Vector3(-10f, -5f, 0f),
-            new Vector3( -6f, -5.5f, 0f),
-            new Vector3( -2f, -5f, 0f),
-            new Vector3(  2f, -4f, 0f),
-            new Vector3(  5f, -3f, 0f),
-            new Vector3(  8f, -2f, 0f),
-            new Vector3( 10f, -1f, 0f),
-            new Vector3( 11f,  0f, 0f),
+            new Vector3( 13f,  4f, 0f),
+            new Vector3( 10f,  3.5f, 0f),
+            new Vector3(  7f,  2.5f, 0f),
+            new Vector3(  4f,  1.5f, 0f),
+            new Vector3(  2f,  0.5f, 0f),
             home,
         }};
+
+        // 3 — Top-right: drops down through the eastern tower belt
+        chains[3] = new PathPatternData.SpawnWaypoints { positions = new Vector3[] {
+            new Vector3(  8f,  6f, 0f),
+            new Vector3(  8f,  4f, 0f),
+            new Vector3(  6f,  2.5f, 0f),
+            new Vector3(  4f,  1f, 0f),
+            new Vector3(  2f,  0f, 0f),
+            home,
+        }};
+
+        // 4 — Right-mid lower: long horizontal in from the eastern edge
+        chains[4] = new PathPatternData.SpawnWaypoints { positions = new Vector3[] {
+            new Vector3( 14f, -1f, 0f),
+            new Vector3( 11f, -1f, 0f),
+            new Vector3(  7f, -1f, 0f),
+            new Vector3(  4f, -1f, 0f),
+            home,
+        }};
+
+        // 5 — Bottom-right: rises through the southern flank
+        chains[5] = new PathPatternData.SpawnWaypoints { positions = new Vector3[] {
+            new Vector3( 10f, -6f, 0f),
+            new Vector3(  9f, -4f, 0f),
+            new Vector3(  6f, -3f, 0f),
+            new Vector3(  3f, -2f, 0f),
+            home,
+        }};
+
         p.spawnWaypointPositions = chains;
         p.waypointPositions = chains[0].positions;
         p.exitPosition      = home;
 
-        // Tower slots — generous coverage spread across the campus.
+        // Tower slots — laid out roughly where the blue squares are in the
+        // sketch. Left-side cluster guards the always-active mid avenue;
+        // right-side cluster covers the routes that unlock later.
         p.towerSlotPositions = new Vector3[]
         {
-            // ── Upper safe band (between top & mid routes) ────────────────
-            new Vector3(-12f,  3f, 0f), new Vector3( -9f,  3f, 0f), new Vector3( -6f,  3f, 0f),
-            new Vector3( -3f,  3f, 0f), new Vector3(  0f,  2.5f, 0f), new Vector3(  3f,  2.5f, 0f),
-            new Vector3(  6f,  2f, 0f), new Vector3(  9f,  3f, 0f),
-            // ── Lower safe band (between mid & bottom routes) ─────────────
-            new Vector3(-12f, -3f, 0f), new Vector3( -9f, -3f, 0f), new Vector3( -6f, -3f, 0f),
-            new Vector3( -3f, -3f, 0f), new Vector3(  0f, -2.5f, 0f), new Vector3(  3f, -2.5f, 0f),
-            new Vector3(  6f, -1f, 0f), new Vector3(  9f, -3f, 0f),
-            // ── Approach to the home base — last line of defence ──────────
-            new Vector3( 11.5f,  2f, 0f), new Vector3( 11.5f, -2f, 0f),
-            new Vector3( 12.5f,  1f, 0f), new Vector3( 12.5f, -1f, 0f),
-            // ── Outer flanks (defends the spawn approaches) ───────────────
-            new Vector3(-12f,  6f, 0f),  new Vector3(-12f, -6f, 0f),
-            new Vector3(  0f,  6f, 0f),  new Vector3(  0f, -6f, 0f),
-            new Vector3(  6f,  4.5f, 0f),new Vector3(  6f, -4.5f, 0f),
+            // ── Left half (covers spawns 0 and 1) ─────────────────────────
+            new Vector3(-12f,  3f, 0f), new Vector3( -8f,  4f, 0f),
+            new Vector3( -7f,  0f, 0f), new Vector3( -5f,  3f, 0f),
+            new Vector3( -3f,  0f, 0f), new Vector3(-11f, -1f, 0f),
+            new Vector3(-13f,  3f, 0f),
+            // ── Right half (covers spawns 2–5) ────────────────────────────
+            new Vector3(  5f,  3.5f, 0f), new Vector3(  3f,  2f, 0f),
+            new Vector3(  7f,  4f, 0f),  new Vector3( 10f,  5f, 0f),
+            new Vector3( 11f,  2f, 0f),  new Vector3(  6f,  0.5f, 0f),
+            new Vector3(  8f, -1f, 0f),  new Vector3(  4f, -2.5f, 0f),
+            new Vector3( 11f, -3f, 0f),  new Vector3( 12f,  1.5f, 0f),
+            new Vector3(  2f, -3f, 0f),  new Vector3(  7f, -4.5f, 0f),
+            // ── Home approach (last line of defence around the base) ──────
+            new Vector3( -0.5f, -2.5f, 0f), new Vector3( 2.5f, -2f, 0f),
         };
         return p;
     }
@@ -862,28 +896,12 @@ public class QuickTestBootstrap : MonoBehaviour
         });
 
         // ── Tower unlocks ──────────────────────────────────────────────
-        // Pull cannon / frost out of the available list.
-        TowerData cannon = null, frost = null;
-        foreach (var t in towersInPool)
-        {
-            if (t == null) continue;
-            if (t.towerType == TowerType.Cannon) cannon = t;
-            if (t.towerType == TowerType.Frost)  frost  = t;
-        }
-        if (cannon != null)
-            list.Add(new BuffOffer {
-                title = "Engineering Lab", description = "Unlocks the AOE Cannon tower.",
-                rarity = BuffRarity.Epic, kind = BuffOfferKind.UnlockTower, towerToUnlock = cannon
-            });
-        if (frost != null)
-            list.Add(new BuffOffer {
-                title = "Cold Storage", description = "Unlocks the Frost Tower (slows enemies).",
-                rarity = BuffRarity.Epic, kind = BuffOfferKind.UnlockTower, towerToUnlock = frost
-            });
+        // Cannon and Frost are now unlocked from the start, so they're no
+        // longer offered as buff unlocks.
 
         // ── Hero unlocks (rare drops, hero pity guarantees one within 5 picks) ──
-        // Build hero TowerData on-the-fly so they always exist regardless of
-        // includeProfessor (marathon hides professors from initial shop).
+        // Self 2 is granted from the start, so only the two extra professors
+        // remain as buff hires.
         TowerData[] heroes = MakeMarathonHeroes(projPrefab);
         list.Add(new BuffOffer {
             title = "Hire: Prof. Lee", description = "Unlocks Prof. Lee \u2014 active AOE blast.",
@@ -893,12 +911,145 @@ public class QuickTestBootstrap : MonoBehaviour
             title = "Hire: Prof. Chan", description = "Unlocks Prof. Chan \u2014 slow field + stealth detection.",
             rarity = BuffRarity.Hero, kind = BuffOfferKind.UnlockHero, towerToUnlock = heroes[1]
         });
-        list.Add(new BuffOffer {
-            title = "Hire: Self 2", description = "Unlocks Self 2 \u2014 ground-targeted DoT pool.",
-            rarity = BuffRarity.Hero, kind = BuffOfferKind.UnlockHero, towerToUnlock = heroes[2]
-        });
 
         return list;
+    }
+
+    /// <summary>Wire each starter tower with two 4-tier upgrade paths plus
+    /// two mutually-exclusive capstone perks. Numbers are tuned so a fully
+    /// upgraded tower deals meaningful single-target damage but never
+    /// out-scales late marathon enemies on its own — hero skills remain
+    /// essential against bosses.</summary>
+    void AssignTowerUpgrades(TowerData rapid, TowerData balanced, TowerData sniper,
+                             TowerData cannon, TowerData frost)
+    {
+        // ── Rapid ──────────────────────────────────────────────────────────
+        // Path 1 — Fire Rate, Path 2 — Damage
+        rapid.path1Upgrades = new TowerUpgrade[] {
+            U("Trigger Discipline", "+25% fire rate",       40, fireRateMul: 1.25f),
+            U("Modded Spring",      "+30% fire rate",       80, fireRateMul: 1.30f),
+            U("Hot Barrels",        "+35% fire rate, +10% dmg", 140, fireRateMul: 1.35f, dmgMul: 1.10f),
+            U("Auto-Targeting",     "+40% fire rate",      220, fireRateMul: 1.40f),
+        };
+        rapid.path2Upgrades = new TowerUpgrade[] {
+            U("Hollow Points",      "+30% damage",          40, dmgMul: 1.30f),
+            U("Match Ammo",         "+35% damage",          80, dmgMul: 1.35f),
+            U("Heavy Slug",         "+40% damage, +10% rate",140, dmgMul: 1.40f, fireRateMul: 1.10f),
+            U("Tungsten Core",      "+50% damage",         220, dmgMul: 1.50f),
+        };
+        rapid.capstonePath1 = U("Bullet Storm",
+            "Fires twice per shot. Devastates groups.",
+            350, extraShots: 1);
+        rapid.capstonePath2 = U("Sharpshooter",
+            "+50% range, +35% damage. One-shots become normal.",
+            350, dmgMul: 1.35f, rangeMul: 1.5f);
+
+        // ── Balanced ───────────────────────────────────────────────────────
+        // Path 1 — Damage, Path 2 — Range / utility
+        balanced.path1Upgrades = new TowerUpgrade[] {
+            U("Sharper Aim",     "+30% damage",          50, dmgMul: 1.30f),
+            U("Reinforced Shot", "+35% damage",         100, dmgMul: 1.35f),
+            U("Concussive Round","+40% damage, +10% rate",170, dmgMul: 1.40f, fireRateMul: 1.10f),
+            U("Lethal Payload",  "+45% damage",         260, dmgMul: 1.45f),
+        };
+        balanced.path2Upgrades = new TowerUpgrade[] {
+            U("Long Sights",   "+25% range",            50, rangeMul: 1.25f),
+            U("Telemetry",     "+25% range, +15% rate", 100, rangeMul: 1.25f, fireRateMul: 1.15f),
+            U("Recon Drone",   "+30% range",           170, rangeMul: 1.30f),
+            U("Stable Mount",  "+25% rate, +15% dmg",  260, fireRateMul: 1.25f, dmgMul: 1.15f),
+        };
+        balanced.capstonePath1 = U("Heavy Hitter",
+            "+60% damage, gains 0.6 splash radius.",
+            380, dmgMul: 1.60f, bonusSplash: 0.6f);
+        balanced.capstonePath2 = U("Battlefield Control",
+            "+40% range, +30% fire rate.",
+            380, rangeMul: 1.40f, fireRateMul: 1.30f);
+
+        // ── Sniper ─────────────────────────────────────────────────────────
+        // Path 1 — Damage, Path 2 — Range / Pierce utility
+        sniper.path1Upgrades = new TowerUpgrade[] {
+            U("Match Barrel",   "+35% damage",         70, dmgMul: 1.35f),
+            U("HV Round",       "+40% damage",         140, dmgMul: 1.40f),
+            U("Armour Piercer", "+45% damage, +10% rate",230, dmgMul: 1.45f, fireRateMul: 1.10f),
+            U("Lethal Caliber", "+50% damage",         340, dmgMul: 1.50f),
+        };
+        sniper.path2Upgrades = new TowerUpgrade[] {
+            U("Spotter",   "+25% range, +15% rate",   70, rangeMul: 1.25f, fireRateMul: 1.15f),
+            U("Tripod",    "+20% range, +20% rate",  140, rangeMul: 1.20f, fireRateMul: 1.20f),
+            U("Eagle Eye", "+30% range",             230, rangeMul: 1.30f),
+            U("Rapid Bolt","+35% rate",              340, fireRateMul: 1.35f),
+        };
+        sniper.capstonePath1 = U("Execute",
+            "Massive +120% damage. Annihilates elites.",
+            450, dmgMul: 2.20f);
+        sniper.capstonePath2 = U("Marksman's Volley",
+            "Fires twice per shot at +20% range.",
+            450, extraShots: 1, rangeMul: 1.20f);
+
+        // ── AOE Cannon ─────────────────────────────────────────────────────
+        // Path 1 — Splash radius / utility, Path 2 — Damage
+        cannon.path1Upgrades = new TowerUpgrade[] {
+            U("Wider Bore",     "+0.4 splash radius",      80, bonusSplash: 0.4f),
+            U("Shrapnel Mix",   "+0.4 splash, +10% rate",  150, bonusSplash: 0.4f, fireRateMul: 1.10f),
+            U("Cluster Shells", "+0.5 splash radius",      240, bonusSplash: 0.5f),
+            U("Saturation Fire","+15% rate, +10% range",   340, fireRateMul: 1.15f, rangeMul: 1.10f),
+        };
+        cannon.path2Upgrades = new TowerUpgrade[] {
+            U("Heavy Powder",   "+30% damage",         80, dmgMul: 1.30f),
+            U("Dense Slug",     "+35% damage",         150, dmgMul: 1.35f),
+            U("Demolition Charge","+40% damage, +0.2 splash",240, dmgMul: 1.40f, bonusSplash: 0.2f),
+            U("HE Round",       "+45% damage",         340, dmgMul: 1.45f),
+        };
+        cannon.capstonePath1 = U("Earthshaker",
+            "Massive +1.2 splash radius, splash deals 90% of base.",
+            500, bonusSplash: 1.2f, splashFracMul: 1.5f);
+        cannon.capstonePath2 = U("Demolition Expert",
+            "+80% damage, +0.4 splash radius.",
+            500, dmgMul: 1.80f, bonusSplash: 0.4f);
+
+        // ── Frost Tower ────────────────────────────────────────────────────
+        // Path 1 — Slow strength/duration, Path 2 — Damage / splash
+        frost.path1Upgrades = new TowerUpgrade[] {
+            U("Sharper Frost",  "Stronger slow",          70, slowMulScale: 0.85f),
+            U("Cold Front",     "+1s slow duration",     140, bonusSlowDur: 1f),
+            U("Glacial Touch",  "Stronger slow, +0.5s dur",230, slowMulScale: 0.85f, bonusSlowDur: 0.5f),
+            U("Permafrost Aura","+0.3 splash radius",    320, bonusSplash: 0.3f),
+        };
+        frost.path2Upgrades = new TowerUpgrade[] {
+            U("Ice Lance",   "+40% damage",          70, dmgMul: 1.40f),
+            U("Shatter",     "+45% damage",         140, dmgMul: 1.45f),
+            U("Frost Shards","+30% rate, +15% dmg", 230, fireRateMul: 1.30f, dmgMul: 1.15f),
+            U("Cryo Charge", "+50% damage",         320, dmgMul: 1.50f),
+        };
+        frost.capstonePath1 = U("Deep Freeze",
+            "Slows are near-stop and last +2.5s longer.",
+            450, slowMulScale: 0.55f, bonusSlowDur: 2.5f);
+        frost.capstonePath2 = U("Frostbite",
+            "+70% damage, +0.4 splash, splash deals 100% of base.",
+            450, dmgMul: 1.70f, bonusSplash: 0.4f, splashFracMul: 1.4f);
+    }
+
+    /// <summary>Compact constructor for an upgrade definition. Every numeric
+    /// argument has a sensible default so callers only pass what changes.</summary>
+    static TowerUpgrade U(string name, string desc, int cost,
+                          float dmgMul = 1f, int bonusDmg = 0,
+                          float rangeMul = 1f, float bonusRange = 0f,
+                          float fireRateMul = 1f, float bonusFireRate = 0f,
+                          int   extraShots = 0,
+                          float bonusSplash = 0f, float splashFracMul = 1f,
+                          float slowMulScale = 1f, float bonusSlowDur = 0f)
+    {
+        return new TowerUpgrade {
+            upgradeName = name, description = desc, cost = cost,
+            damageMultiplier   = dmgMul,   bonusDamage = bonusDmg,
+            rangeMultiplier    = rangeMul, bonusRange  = bonusRange,
+            fireRateMultiplier = fireRateMul, bonusFireRate = bonusFireRate,
+            extraShotsPerVolley = extraShots,
+            bonusSplashRadius   = bonusSplash,
+            splashFractionMultiplier = splashFracMul,
+            slowMultiplierScale = slowMulScale,
+            bonusSlowDuration   = bonusSlowDur,
+        };
     }
 
     TowerData[] MakeMarathonHeroes(GameObject projPrefab)

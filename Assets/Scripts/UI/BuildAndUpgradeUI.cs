@@ -32,6 +32,8 @@ public class BuildAndUpgradeUI : MonoBehaviour
     private TextMeshProUGUI _upgradeStats;
     private Button   _path1Btn,   _path2Btn,   _sellBtn;
     private TextMeshProUGUI _path1Lbl, _path2Lbl;
+    private Button   _cap1Btn,    _cap2Btn;
+    private TextMeshProUGUI _cap1Lbl, _cap2Lbl;
 
     public void Build(Canvas canvas, TowerData[] options, Tower prefab)
     {
@@ -195,20 +197,20 @@ public class BuildAndUpgradeUI : MonoBehaviour
         _upgradeRoot = MakePanel(_canvas.transform, "TowerUpgradePanel",
                                  new Color(0.04f, 0.06f, 0.12f, 0.95f));
         var rt = _upgradeRoot.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0.13f, 0.13f);
-        rt.anchorMax = new Vector2(0.42f, 0.45f);
+        rt.anchorMin = new Vector2(0.13f, 0.10f);
+        rt.anchorMax = new Vector2(0.46f, 0.55f);
         rt.offsetMin = rt.offsetMax = Vector2.zero;
         _upgradeRoot.SetActive(false);
 
         var titleObj = MakeText(_upgradeRoot.transform, "Title", "Tower", 26, Color.white);
         var titleRT  = titleObj.GetComponent<RectTransform>();
-        titleRT.anchorMin = new Vector2(0, 0.85f); titleRT.anchorMax = new Vector2(1, 1);
+        titleRT.anchorMin = new Vector2(0, 0.88f); titleRT.anchorMax = new Vector2(1, 1);
         titleRT.offsetMin = titleRT.offsetMax = Vector2.zero;
         _upgradeTitle = titleObj.GetComponent<TextMeshProUGUI>();
 
-        var statsObj = MakeText(_upgradeRoot.transform, "Stats", "", 16, new Color(0.8f, 0.85f, 0.95f));
+        var statsObj = MakeText(_upgradeRoot.transform, "Stats", "", 14, new Color(0.8f, 0.85f, 0.95f));
         var statsRT  = statsObj.GetComponent<RectTransform>();
-        statsRT.anchorMin = new Vector2(0.05f, 0.6f); statsRT.anchorMax = new Vector2(0.95f, 0.85f);
+        statsRT.anchorMin = new Vector2(0.05f, 0.70f); statsRT.anchorMax = new Vector2(0.95f, 0.88f);
         statsRT.offsetMin = statsRT.offsetMax = Vector2.zero;
         _upgradeStats = statsObj.GetComponent<TextMeshProUGUI>();
         _upgradeStats.alignment = TextAlignmentOptions.TopLeft;
@@ -216,7 +218,7 @@ public class BuildAndUpgradeUI : MonoBehaviour
         // Path 1 button
         GameObject p1 = MakeButton(_upgradeRoot.transform, "Path1", "—", new Color(0.18f, 0.42f, 0.78f));
         var p1RT = p1.GetComponent<RectTransform>();
-        p1RT.anchorMin = new Vector2(0.05f, 0.32f); p1RT.anchorMax = new Vector2(0.48f, 0.55f);
+        p1RT.anchorMin = new Vector2(0.05f, 0.48f); p1RT.anchorMax = new Vector2(0.48f, 0.68f);
         p1RT.offsetMin = p1RT.offsetMax = Vector2.zero;
         _path1Btn = p1.GetComponent<Button>();
         _path1Lbl = p1.GetComponentInChildren<TextMeshProUGUI>();
@@ -225,16 +227,34 @@ public class BuildAndUpgradeUI : MonoBehaviour
         // Path 2 button
         GameObject p2 = MakeButton(_upgradeRoot.transform, "Path2", "—", new Color(0.78f, 0.42f, 0.18f));
         var p2RT = p2.GetComponent<RectTransform>();
-        p2RT.anchorMin = new Vector2(0.52f, 0.32f); p2RT.anchorMax = new Vector2(0.95f, 0.55f);
+        p2RT.anchorMin = new Vector2(0.52f, 0.48f); p2RT.anchorMax = new Vector2(0.95f, 0.68f);
         p2RT.offsetMin = p2RT.offsetMax = Vector2.zero;
         _path2Btn = p2.GetComponent<Button>();
         _path2Lbl = p2.GetComponentInChildren<TextMeshProUGUI>();
         _path2Btn.onClick.AddListener(() => BuyUpgrade(2));
 
+        // Capstone 1 button (purple/blue — path 1 finisher)
+        GameObject c1 = MakeButton(_upgradeRoot.transform, "Cap1", "—", new Color(0.32f, 0.18f, 0.55f));
+        var c1RT = c1.GetComponent<RectTransform>();
+        c1RT.anchorMin = new Vector2(0.05f, 0.27f); c1RT.anchorMax = new Vector2(0.48f, 0.46f);
+        c1RT.offsetMin = c1RT.offsetMax = Vector2.zero;
+        _cap1Btn = c1.GetComponent<Button>();
+        _cap1Lbl = c1.GetComponentInChildren<TextMeshProUGUI>();
+        _cap1Btn.onClick.AddListener(() => BuyCapstone(1));
+
+        // Capstone 2 button (gold/red — path 2 finisher)
+        GameObject c2 = MakeButton(_upgradeRoot.transform, "Cap2", "—", new Color(0.55f, 0.32f, 0.10f));
+        var c2RT = c2.GetComponent<RectTransform>();
+        c2RT.anchorMin = new Vector2(0.52f, 0.27f); c2RT.anchorMax = new Vector2(0.95f, 0.46f);
+        c2RT.offsetMin = c2RT.offsetMax = Vector2.zero;
+        _cap2Btn = c2.GetComponent<Button>();
+        _cap2Lbl = c2.GetComponentInChildren<TextMeshProUGUI>();
+        _cap2Btn.onClick.AddListener(() => BuyCapstone(2));
+
         // Sell button
         GameObject sell = MakeButton(_upgradeRoot.transform, "Sell", "Sell", new Color(0.55f, 0.18f, 0.18f));
         var sellRT = sell.GetComponent<RectTransform>();
-        sellRT.anchorMin = new Vector2(0.05f, 0.06f); sellRT.anchorMax = new Vector2(0.48f, 0.26f);
+        sellRT.anchorMin = new Vector2(0.05f, 0.05f); sellRT.anchorMax = new Vector2(0.48f, 0.23f);
         sellRT.offsetMin = sellRT.offsetMax = Vector2.zero;
         _sellBtn = sell.GetComponent<Button>();
         _sellBtn.onClick.AddListener(SellTower);
@@ -242,7 +262,7 @@ public class BuildAndUpgradeUI : MonoBehaviour
         // Close button
         GameObject close = MakeButton(_upgradeRoot.transform, "Close", "Close", new Color(0.3f, 0.3f, 0.35f));
         var clRT = close.GetComponent<RectTransform>();
-        clRT.anchorMin = new Vector2(0.52f, 0.06f); clRT.anchorMax = new Vector2(0.95f, 0.26f);
+        clRT.anchorMin = new Vector2(0.52f, 0.05f); clRT.anchorMax = new Vector2(0.95f, 0.23f);
         clRT.offsetMin = clRT.offsetMax = Vector2.zero;
         close.GetComponent<Button>().onClick.AddListener(CloseMenus);
     }
@@ -266,16 +286,59 @@ public class BuildAndUpgradeUI : MonoBehaviour
         if (_activeTower == null || _activeTower.data == null) { CloseMenus(); return; }
         TowerData d = _activeTower.data;
 
+        int totalTier = _activeTower.path1Tier + _activeTower.path2Tier;
+        string capStatus = _activeTower.capstoneTier == 0
+            ? $"Capstone: {totalTier}/{Mathf.Max(1, d.capstoneRequiredTotalTiers)}"
+            : $"Capstone: {(_activeTower.capstoneTier == 1 ? d.capstonePath1?.upgradeName : d.capstonePath2?.upgradeName)}";
+
         _upgradeTitle.text = $"{d.towerName}";
         _upgradeStats.text =
-            $"Damage: {_activeTower.currentDamage}\n" +
-            $"Range:  {_activeTower.currentRange:F1}\n" +
-            $"Rate:   {_activeTower.currentFireRate:F2}/s\n" +
-            $"Path 1 tier: {_activeTower.path1Tier}/{(d.path1Upgrades?.Length ?? 0)}\n" +
-            $"Path 2 tier: {_activeTower.path2Tier}/{(d.path2Upgrades?.Length ?? 0)}";
+            $"Damage: {_activeTower.currentDamage}   Range: {_activeTower.currentRange:F1}   Rate: {_activeTower.currentFireRate:F2}/s\n" +
+            $"Path 1: {_activeTower.path1Tier}/{(d.path1Upgrades?.Length ?? 0)}    " +
+            $"Path 2: {_activeTower.path2Tier}/{(d.path2Upgrades?.Length ?? 0)}\n" +
+            capStatus;
 
         UpdatePathButton(1, d.path1Upgrades, _activeTower.path1Tier, _path1Btn, _path1Lbl);
         UpdatePathButton(2, d.path2Upgrades, _activeTower.path2Tier, _path2Btn, _path2Lbl);
+        UpdateCapstoneButton(1, d.capstonePath1, _cap1Btn, _cap1Lbl);
+        UpdateCapstoneButton(2, d.capstonePath2, _cap2Btn, _cap2Lbl);
+    }
+
+    void UpdateCapstoneButton(int idx, TowerUpgrade cap, Button btn, TextMeshProUGUI label)
+    {
+        if (cap == null)
+        {
+            label.text = "—";
+            btn.interactable = false;
+            return;
+        }
+        if (_activeTower.capstoneTier != 0)
+        {
+            // A capstone has been chosen — lock both buttons.
+            label.text = (_activeTower.capstoneTier == idx)
+                ? $"★ {cap.upgradeName}\n(active)"
+                : $"{cap.upgradeName}\n(other path chosen)";
+            btn.interactable = false;
+            return;
+        }
+        if (!_activeTower.CanBuyCapstone())
+        {
+            label.text = $"{cap.upgradeName}\n(needs {_activeTower.data.capstoneRequiredTotalTiers} upgrades)";
+            btn.interactable = false;
+            return;
+        }
+        label.text = $"★ {cap.upgradeName}\n{cap.description}\n<b>{cap.cost}g</b>";
+        btn.interactable = CurrencyManager.Instance != null && CurrencyManager.Instance.CanAfford(cap.cost);
+    }
+
+    void BuyCapstone(int pathIndex)
+    {
+        if (_activeTower == null) return;
+        if (_activeTower.TryBuyCapstone(pathIndex))
+        {
+            BuildRangeRing(_activeTower);
+            RefreshUpgradePanel();
+        }
     }
 
     void UpdatePathButton(int idx, TowerUpgrade[] path, int tier, Button btn, TextMeshProUGUI label)

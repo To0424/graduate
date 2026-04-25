@@ -75,11 +75,19 @@ public class GameplayAutoSetup : MonoBehaviour
         CreateHUD(canvas.transform);
         EnsureStarterAndUnlockedProfessors();
         CreateBuildAndUpgradeUI(canvas);
-        CreateNormalTowerSidebar(canvas.transform);
+        CreateTowerShop(canvas.transform);
         CreateSkillTreeUI(canvas.transform);
         CreateGameOverUI(canvas.transform);
         CreateHeroSkillUI(canvas.transform);
+        CreateRoundCompleteBanner(canvas);
         SetupLevel();
+    }
+
+    void CreateRoundCompleteBanner(Canvas canvas)
+    {
+        GameObject go = new GameObject("RoundCompleteBannerHost");
+        var banner = go.AddComponent<RoundCompleteBanner>();
+        banner.Build(canvas);
     }
 
     void EnsureTowerPrefabIsClickable()
@@ -408,6 +416,11 @@ public class GameplayAutoSetup : MonoBehaviour
         if (!hasStarter)
             list.Add(BuildStarterPlayerHero());
 
+        // 1b. "Self 2" — also granted from the start (ground-targeted DoT pool).
+        bool hasSelf2 = list.Exists(t => t != null && t.isProfessorTower && t.towerName == "Self 2");
+        if (!hasSelf2)
+            list.Add(BuildStarterPlayerHero2());
+
         // 2. Unlocked faculty professors (only those configured with a hero skill)
         if (GameManager.Instance != null && GameManager.Instance.allFaculties != null)
         {
@@ -456,6 +469,40 @@ public class GameplayAutoSetup : MonoBehaviour
         return td;
     }
 
+    private static TowerData _cachedStarterHero2;
+
+    /// <summary>Creates (and caches) the second free starter hero — a
+    /// ground-targeted DoT pool. Granted to the player from level one.</summary>
+    static TowerData BuildStarterPlayerHero2()
+    {
+        if (_cachedStarterHero2 != null) return _cachedStarterHero2;
+
+        HeroSkillData skill = ScriptableObject.CreateInstance<HeroSkillData>();
+        skill.skillName        = "Study Group";
+        skill.description      = "Drops a focused study area dealing damage over time.";
+        skill.cooldown         = 20f;
+        skill.effect           = HeroSkillEffect.GroundTargetedAOE;
+        skill.radius           = 2.5f;
+        skill.aoeDamagePerTick = 15;
+        skill.aoeTickInterval  = 0.4f;
+        skill.aoeDuration      = 3f;
+        skill.aoeDamageType    = DamageType.Pierce;
+
+        TowerData td = ScriptableObject.CreateInstance<TowerData>();
+        td.towerName        = "Self 2";
+        td.towerType        = TowerType.Professor;
+        td.cost             = 0;
+        td.range            = 0f;
+        td.fireRate         = 0f;
+        td.damage           = 0;
+        td.isProfessorTower = true;
+        td.heroSkill        = skill;
+        td.unique           = true;
+
+        _cachedStarterHero2 = td;
+        return td;
+    }
+
     void CreateTowerShop(Transform parent)
     {
         // Always make sure the player has a starter hero ("Self") plus any
@@ -484,8 +531,23 @@ public class GameplayAutoSetup : MonoBehaviour
         // ── Professor shop (right panel, only if there are professors) ────────
         if (professorTowers.Count > 0)
             BuildShopPanel(parent, "ProfessorShopPanel", "HEROES",
-                           new Vector2(0.88f, 0f), new Vector2(1f, 0.9f),
+                           new Vector2(0.93f, 0.10f), new Vector2(1f, 0.85f),
                            professorTowers, isProfessor: true);
+    }
+
+    /// <summary>Destroy and recreate the side shop panels using the current
+    /// <see cref="availableTowers"/>. Called when marathon buffs unlock new
+    /// towers mid-run so the side shop reflects them immediately.</summary>
+    public void RebuildTowerShop()
+    {
+        var canvas = FindAnyObjectByType<Canvas>();
+        if (canvas == null) return;
+        Transform parent = canvas.transform;
+        var existingTowers = parent.Find("TowerShopPanel");
+        if (existingTowers != null) Destroy(existingTowers.gameObject);
+        var existingHeroes = parent.Find("ProfessorShopPanel");
+        if (existingHeroes != null) Destroy(existingHeroes.gameObject);
+        CreateTowerShop(parent);
     }
 
     void BuildShopPanel(Transform parent, string panelName, string title,
@@ -527,10 +589,12 @@ public class GameplayAutoSetup : MonoBehaviour
             subRT.offsetMax = Vector2.zero;
         }
 
-        // Tower buttons
+        // Tower buttons. Cap per-button height so a 1-hero list doesn't
+        // produce a giant button that fills the entire panel.
         float startY     = isProfessor ? 0.82f : 0.88f;
         float totalSpace = startY;
-        float yStep      = totalSpace / Mathf.Max(towers.Count, 1);
+        float maxStep    = isProfessor ? 0.16f : 0.18f;  // <= ~16-18% of panel height
+        float yStep      = Mathf.Min(maxStep, totalSpace / Mathf.Max(towers.Count, 1));
 
         for (int i = 0; i < towers.Count; i++)
         {

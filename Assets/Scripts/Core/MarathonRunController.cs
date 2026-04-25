@@ -89,6 +89,56 @@ public class MarathonRunController : MonoBehaviour
             FlashSpawnUnlock(active - 1); // last unlocked index
             _lastUnlockedCount = active;
         }
+        // Pulse a red preview line from each active spawn to the home base
+        // so the player sees exactly where enemies are coming from.
+        StartCoroutine(PulseEnemyPaths(active, 3f));
+    }
+
+    /// <summary>Draw a red, pulsing LineRenderer along each active enemy
+    /// route for <paramref name="seconds"/> seconds, then clean up.</summary>
+    IEnumerator PulseEnemyPaths(int activeCount, float seconds)
+    {
+        var pm = FindFirstObjectByType<PathManager>();
+        if (pm == null || pm.currentWaypoints == null) yield break;
+        Waypoints wp = pm.currentWaypoints;
+
+        var lines = new System.Collections.Generic.List<LineRenderer>();
+        for (int s = 0; s < activeCount; s++)
+        {
+            Transform[] route = wp.GetPathFor(s);
+            if (route == null || route.Length < 2) continue;
+
+            var lineGO = new GameObject($"MarathonPulseLine_{s}");
+            lineGO.transform.SetParent(transform, false);
+            var lr = lineGO.AddComponent<LineRenderer>();
+            lr.material = new Material(Shader.Find("Sprites/Default"));
+            lr.startColor = lr.endColor = new Color(1f, 0.15f, 0.15f, 1f);
+            lr.startWidth = lr.endWidth = 0.22f;
+            lr.numCornerVertices = 4;
+            lr.numCapVertices = 4;
+            lr.useWorldSpace = true;
+            lr.sortingOrder = 50;
+            lr.positionCount = route.Length;
+            for (int i = 0; i < route.Length; i++)
+            {
+                Vector3 p = route[i].position; p.z = -0.5f;
+                lr.SetPosition(i, p);
+            }
+            lines.Add(lr);
+        }
+        if (lines.Count == 0) yield break;
+
+        float t = 0f;
+        while (t < seconds)
+        {
+            t += Time.deltaTime;
+            // Sine pulse: 0.25 → 1.0 alpha at ~2 Hz.
+            float pulse = 0.25f + 0.75f * (0.5f + 0.5f * Mathf.Sin(t * Mathf.PI * 4f));
+            Color c = new Color(1f, 0.15f, 0.15f, pulse);
+            foreach (var lr in lines) { lr.startColor = c; lr.endColor = c; }
+            yield return null;
+        }
+        foreach (var lr in lines) if (lr != null) Destroy(lr.gameObject);
     }
 
     /// <summary>Show / hide spawn markers and per-spawn path lines based on

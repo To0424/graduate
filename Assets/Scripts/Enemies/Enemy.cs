@@ -497,15 +497,20 @@ public class Enemy : MonoBehaviour
             : data.goldReward;
 
         CurrencyManager.Instance?.AddGold(reward);
-        OnEnemyDeath?.Invoke(this);
-        if (data.archetype == EnemyArchetype.Boss)
-            OnBossDefeated?.Invoke(this);
 
-        // Splitter: spawn smaller copies that continue along this enemy's path.
+        // Splitter: spawn smaller copies BEFORE notifying the wave spawner of
+        // the death. Doing it in this order means enemiesAlive is incremented
+        // by the children before being decremented by the parent's death —
+        // otherwise a splitter dying as the last enemy on screen would
+        // momentarily hit zero and trigger a premature round-complete.
         if (data.archetype == EnemyArchetype.Splitter && data.splitInto != null && WaveSpawner.Instance != null)
         {
             WaveSpawner.Instance.SpawnSplit(data.splitInto, transform.position, waypoints, currentWaypointIndex, data.splitCount);
         }
+
+        OnEnemyDeath?.Invoke(this);
+        if (data.archetype == EnemyArchetype.Boss)
+            OnBossDefeated?.Invoke(this);
 
         Destroy(gameObject);
     }

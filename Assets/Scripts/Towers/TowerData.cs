@@ -69,6 +69,14 @@ public class TowerData : ScriptableObject
     public TowerUpgrade[] path2Upgrades;
     public TowerData path2Evolution;
     public int path2EvolveAtTier = 3;
+
+    [Header("Capstone Perks (one-shot, mutually exclusive)")]
+    [Tooltip("Total upgrade tiers (path1 + path2) needed before capstones unlock.")]
+    public int capstoneRequiredTotalTiers = 5;
+    [Tooltip("Capstone perk that complements path 1's identity.")]
+    public TowerUpgrade capstonePath1;
+    [Tooltip("Capstone perk that complements path 2's identity.")]
+    public TowerUpgrade capstonePath2;
 }
 
 [System.Serializable]
@@ -83,4 +91,16 @@ public class TowerUpgrade
     public float bonusRange        = 0f;
     public float fireRateMultiplier = 1f;
     public float bonusFireRate     = 0f;
+
+    [Header("Capstone-style payloads (optional)")]
+    [Tooltip("Extra projectiles fired per volley. 1 = fires twice per shot, etc.")]
+    public int   extraShotsPerVolley = 0;
+    [Tooltip("Adds to TowerData.splashRadius. Use to grant or grow AOE.")]
+    public float bonusSplashRadius   = 0f;
+    [Tooltip("Multiplies the splash damage fraction.")]
+    public float splashFractionMultiplier = 1f;
+    [Tooltip("Multiplies slow strength (lower = stronger slow). 1 = no change.")]
+    public float slowMultiplierScale = 1f;
+    [Tooltip("Adds to slow duration in seconds.")]
+    public float bonusSlowDuration   = 0f;
 }

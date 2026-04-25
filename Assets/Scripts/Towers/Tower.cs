@@ -21,8 +21,15 @@ public class Tower : MonoBehaviour
 
     // ── Upgrade tracking ─────────────────────────────────────────────────────
     public int path1Tier = 0;
-    public int path2Tier = 0;
+    public int path2Tier = 0;    /// <summary>0 = none, 1 = capstone1 bought, 2 = capstone2 bought.</summary>
+    public int capstoneTier = 0;
 
+    // Capstone-driven runtime modifiers (re-applied after every upgrade).
+    int   _extraShotsPerVolley = 0;
+    float _bonusSplashRadius   = 0f;
+    float _splashFractionScale = 1f;
+    float _slowMultiplierScale = 1f;
+    float _bonusSlowDuration   = 0f;
     public virtual void Initialize(TowerData towerData, TowerSlot towerSlot)
     {
         data = towerData;
@@ -66,9 +73,7 @@ public class Tower : MonoBehaviour
         TowerUpgrade up = path[tier];
         if (CurrencyManager.Instance == null || !CurrencyManager.Instance.SpendGold(up.cost)) return false;
 
-        currentDamage   = Mathf.RoundToInt(currentDamage * up.damageMultiplier) + up.bonusDamage;
-        currentRange    = currentRange    * up.rangeMultiplier   + up.bonusRange;
-        currentFireRate = currentFireRate * up.fireRateMultiplier + up.bonusFireRate;
+        ApplyUpgradeStats(up);
 
         if (pathIndex == 1) path1Tier++;
         else                path2Tier++;
@@ -79,6 +84,43 @@ public class Tower : MonoBehaviour
         int       newTier = pathIndex == 1 ? path1Tier : path2Tier;
         if (evo != null && newTier >= trig) EvolveTo(evo);
         return true;
+    }
+
+    /// <summary>True when the player has bought enough upgrades to access the
+    /// capstone choices and hasn't already locked one in.</summary>
+    public bool CanBuyCapstone()
+    {
+        if (data == null) return false;
+        if (capstoneTier != 0) return false;
+        return (path1Tier + path2Tier) >= Mathf.Max(1, data.capstoneRequiredTotalTiers);
+    }
+
+    /// <summary>Buy capstone 1 (if pathIndex==1) or capstone 2. One per tower.</summary>
+    public bool TryBuyCapstone(int pathIndex)
+    {
+        if (data == null || capstoneTier != 0) return false;
+        if ((path1Tier + path2Tier) < Mathf.Max(1, data.capstoneRequiredTotalTiers)) return false;
+        TowerUpgrade cap = pathIndex == 1 ? data.capstonePath1 : data.capstonePath2;
+        if (cap == null) return false;
+        if (CurrencyManager.Instance == null || !CurrencyManager.Instance.SpendGold(cap.cost)) return false;
+
+        ApplyUpgradeStats(cap);
+        capstoneTier = pathIndex;
+        return true;
+    }
+
+    void ApplyUpgradeStats(TowerUpgrade up)
+    {
+        currentDamage   = Mathf.RoundToInt(currentDamage * up.damageMultiplier) + up.bonusDamage;
+        currentRange    = currentRange    * up.rangeMultiplier   + up.bonusRange;
+        currentFireRate = currentFireRate * up.fireRateMultiplier + up.bonusFireRate;
+
+        // Capstone-style extras stack additively across upgrades.
+        _extraShotsPerVolley += Mathf.Max(0, up.extraShotsPerVolley);
+        _bonusSplashRadius   += up.bonusSplashRadius;
+        _splashFractionScale *= Mathf.Max(0.01f, up.splashFractionMultiplier);
+        _slowMultiplierScale *= Mathf.Max(0.01f, up.slowMultiplierScale);
+        _bonusSlowDuration   += up.bonusSlowDuration;
     }
 
     /// <summary>Replace this tower's TowerData with an evolved version (preserves slot and upgrade state).</summary>
@@ -195,14 +237,52 @@ public class Tower : MonoBehaviour
         if (data.projectilePrefab == null || targetEnemy == null) return;
 
         int boostedDamage = Mathf.RoundToInt(currentDamage * _tempDamageMult);
+        FireProjectile(targetEnemy, boostedDamage);
+
+        // Capstone "fires twice" / multi-shot: spawn extra projectiles. They
+        // pick the next-best targets so a single tank doesn't soak all shots.
+        if (_extraShotsPerVolley > 0)
+        {
+            Enemy[] all = FindObjectsByType<Enemy>(FindObjectsSortMode.None);
+            for (int n = 0; n < _extraShotsPerVolley; n++)
+            {
+                Enemy alt = FindNextTarget(all, targetEnemy, n + 1);
+                if (alt != null) FireProjectile(alt, boostedDamage);
+                else             FireProjectile(targetEnemy, boostedDamage);
+            }
+        }
+    }
+
+    void FireProjectile(Enemy target, int dmg)
+    {
         GameObject projObj = Instantiate(data.projectilePrefab, firePoint.position, Quaternion.identity);
         Projectile proj = projObj.GetComponent<Projectile>();
         if (proj != null)
         {
-            proj.Initialize(targetEnemy, boostedDamage, data.damageType,
-                            data.splashRadius, data.splashDamageFraction,
-                            data.slowOnHitMultiplier, data.slowOnHitDuration);
+            float effSplash = data.splashRadius + _bonusSplashRadius;
+            float effFrac   = Mathf.Clamp01(data.splashDamageFraction * _splashFractionScale);
+            float effSlow   = Mathf.Clamp(data.slowOnHitMultiplier * _slowMultiplierScale, 0.05f, 1f);
+            float effDur    = data.slowOnHitDuration + _bonusSlowDuration;
+            proj.Initialize(target, dmg, data.damageType,
+                            effSplash, effFrac,
+                            effSlow, effDur);
         }
+    }
+
+    Enemy FindNextTarget(Enemy[] all, Enemy exclude, int skip)
+    {
+        // Pick the Nth closest enemy in range, skipping the primary target.
+        Enemy best = null; float bestDist = float.MaxValue; int seen = 0;
+        // Two-pass: collect in-range, then sort-ish by linear scan.
+        for (int i = 0; i < all.Length; i++)
+        {
+            Enemy e = all[i];
+            if (e == null || e == exclude || !e.IsTargetable()) continue;
+            float d = Vector3.Distance(transform.position, e.transform.position);
+            if (d > currentRange) continue;
+            if (d < bestDist) { bestDist = d; best = e; seen++; }
+        }
+        return best;
     }
 
     Enemy FindClosestEnemy()

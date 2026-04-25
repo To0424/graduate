@@ -62,7 +62,7 @@ public class PathManager : MonoBehaviour
             // Visual: small circle at each waypoint
             SpriteRenderer dot = point.AddComponent<SpriteRenderer>();
             dot.sprite = RuntimeSprite.Circle;
-            dot.color = new Color(0.4f, 0.8f, 0.4f, 0.5f);
+            dot.color = new Color(0.55f, 1f, 0.55f, 0.95f);
             dot.sortingOrder = 1;
             point.transform.localScale = Vector3.one * 0.3f;
         }
@@ -159,7 +159,7 @@ public class PathManager : MonoBehaviour
             // Visual: semi-transparent square
             SpriteRenderer sr = slotObj.AddComponent<SpriteRenderer>();
             sr.sprite = RuntimeSprite.WhiteSquare;
-            sr.color = new Color(0.3f, 0.5f, 0.8f, 0.6f);
+            sr.color = new Color(0.45f, 0.78f, 1f, 0.95f);
             sr.sortingOrder = 2;
             slotObj.transform.localScale = Vector3.one * 0.7f;
 
@@ -181,7 +181,7 @@ public class PathManager : MonoBehaviour
         line.transform.SetParent(parent);
         SpriteRenderer sr = line.AddComponent<SpriteRenderer>();
         sr.sprite = RuntimeSprite.WhiteSquare;
-        sr.color = new Color(0.6f, 0.5f, 0.3f, 0.7f);
+        sr.color = new Color(1f, 0.85f, 0.45f, 1f);
         sr.sortingOrder = 0;
 
         Vector3 midpoint = (from + to) / 2f;
@@ -190,7 +190,7 @@ public class PathManager : MonoBehaviour
         float distance = Vector3.Distance(from, to);
         float angle = Mathf.Atan2(to.y - from.y, to.x - from.x) * Mathf.Rad2Deg;
         line.transform.rotation = Quaternion.Euler(0, 0, angle);
-        line.transform.localScale = new Vector3(distance, 0.3f, 1f);
+        line.transform.localScale = new Vector3(distance, 0.42f, 1f);
     }
 
     void ClearCurrentPath()

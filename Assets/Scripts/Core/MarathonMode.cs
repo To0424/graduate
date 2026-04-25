@@ -32,9 +32,21 @@ public static class MarathonMode
     /// over time. Visual unlock is handled by <c>MarathonRunController</c>.</summary>
     public static int ActiveSpawnCount(int wave1Based)
     {
-        if (wave1Based >= 25) return Mathf.Min(3, SpawnPointCount);
-        if (wave1Based >= 10) return Mathf.Min(2, SpawnPointCount);
-        return 1;
+        // Progressive unlocks across the 6 marathon spawns.
+        //   wave 1+  : 1 (left mid avenue)
+        //   wave 5+  : 2 (+ top-left)
+        //   wave 10+ : 3 (+ right-mid upper)
+        //   wave 15+ : 4 (+ top-right)
+        //   wave 25+ : 5 (+ right-mid lower)
+        //   wave 35+ : 6 (+ bottom-right)
+        int unlocked;
+        if      (wave1Based >= 35) unlocked = 6;
+        else if (wave1Based >= 25) unlocked = 5;
+        else if (wave1Based >= 15) unlocked = 4;
+        else if (wave1Based >= 10) unlocked = 3;
+        else if (wave1Based >=  5) unlocked = 2;
+        else                       unlocked = 1;
+        return Mathf.Min(unlocked, Mathf.Max(1, SpawnPointCount));
     }
 
     /// <summary>Buff offers eligible to drop in this run. Filled by bootstrap.</summary>
@@ -386,8 +398,16 @@ public static class MarathonMode
     public static void RecordBuffPicked(BuffOffer picked)
     {
         BuffSelectionsTaken++;
-        if (picked != null && picked.rarity == BuffRarity.Hero) PityCounter = 0;
+        if (picked == null) return;
+        if (picked.rarity == BuffRarity.Hero) PityCounter = 0;
         else PityCounter++;
+        // One-shot offers (tower / hero unlocks) should never reappear once
+        // picked — they have no further effect on subsequent picks.
+        if (picked.kind == BuffOfferKind.UnlockTower ||
+            picked.kind == BuffOfferKind.UnlockHero)
+        {
+            BuffPool.Remove(picked);
+        }
     }
 
     static EnemyData ScaledClone(EnemyData src, float hpMul, int goldBonus)

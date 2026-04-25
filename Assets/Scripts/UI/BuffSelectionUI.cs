@@ -159,14 +159,38 @@ public class BuffSelectionUI : MonoBehaviour
     void AddTowerToBuildMenu(TowerData td)
     {
         if (td == null) return;
+        // 1. Radial build menu (BuildAndUpgradeUI.availableOptions).
         var ui = FindAnyObjectByType<BuildAndUpgradeUI>();
-        if (ui == null) return;
-        var existing = ui.availableOptions ?? new TowerData[0];
-        foreach (var t in existing) if (t == td) return; // already unlocked
-        var newArr = new TowerData[existing.Length + 1];
-        for (int i = 0; i < existing.Length; i++) newArr[i] = existing[i];
-        newArr[existing.Length] = td;
-        ui.availableOptions = newArr;
+        if (ui != null)
+        {
+            var existing = ui.availableOptions ?? new TowerData[0];
+            bool already = false;
+            foreach (var t in existing) if (t == td) { already = true; break; }
+            if (!already)
+            {
+                var newArr = new TowerData[existing.Length + 1];
+                for (int i = 0; i < existing.Length; i++) newArr[i] = existing[i];
+                newArr[existing.Length] = td;
+                ui.availableOptions = newArr;
+            }
+        }
+
+        // 2. Side shop panel (GameplayAutoSetup.availableTowers + rebuilt panel).
+        var setup = FindAnyObjectByType<GameplayAutoSetup>();
+        if (setup != null)
+        {
+            var existing = setup.availableTowers ?? new TowerData[0];
+            bool already = false;
+            foreach (var t in existing) if (t == td) { already = true; break; }
+            if (!already)
+            {
+                var newArr = new TowerData[existing.Length + 1];
+                for (int i = 0; i < existing.Length; i++) newArr[i] = existing[i];
+                newArr[existing.Length] = td;
+                setup.availableTowers = newArr;
+                setup.RebuildTowerShop();
+            }
+        }
     }
 
     void Close()
