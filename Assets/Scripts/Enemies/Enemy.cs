@@ -85,6 +85,25 @@ public class Enemy : MonoBehaviour
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
         if (sr == null) return;
 
+        // If this prefab has an Animator driving the SpriteRenderer, don't
+        // overwrite its sprite or tint — let the animation play as authored.
+        bool hasAnimator = TryGetComponent<Animator>(out var anim) && anim.runtimeAnimatorController != null;
+        if (hasAnimator)
+        {
+            sr.color = Color.white;
+            // Boss still needs scale + label even when animated.
+            if (data.archetype == EnemyArchetype.Boss)
+            {
+                transform.localScale = Vector3.one * data.bossScale;
+                CreateBossLabel();
+            }
+            else if (data.archetype == EnemyArchetype.ShieldAura)
+            {
+                CreateAuraRing();
+            }
+            return;
+        }
+
         sr.sprite = data.sprite != null ? data.sprite : RuntimeSprite.Circle;
 
         switch (data.archetype)

@@ -17,7 +17,21 @@ MonoBehaviour:
   maxHealth: 80
   goldReward: 10
   courseTier: 1
-  sprite: {fileID: 0}
+  sprite: {fileID: 771526018, guid: 00001e5f28f5cff478ebda6f9568de76, type: 3}
   archetype: 0
   shieldHealth: 0
   bossScale: 2.5
+  splitInto: {fileID: 0}
+  splitCount: 2
+  shieldAuraRadius: 2.5
+  shieldAuraAmount: 30
+  shieldAuraInterval: 3
+  bossAbilities: 0
+  teleportInterval: 6
+  teleportSkipWaypoints: 2
+  regenPerSecond: 5
+  enrageHpThreshold: 0.4
+  enrageSpeedMult: 1.7
+  summonInterval: 8
+  summonCount: 2
+  summonTemplate: {fileID: 0}

@@ -30,6 +30,10 @@ public class QuickTestBootstrap : MonoBehaviour
     [Tooltip("If set, loads a saved custom map instead of the default test path.")]
     public string customMapName;
 
+    [Header("Optional Prefab Overrides")]
+    [Tooltip("If assigned, this prefab is used for spawned enemies instead of the procedural red-circle one. Drag your Assets/Prefabs/Enemy.prefab here to use the animated version.")]
+    public GameObject enemyPrefabOverride;
+
     // ── Entry point ───────────────────────────────────────────────────────────
 
     void Awake()
@@ -252,6 +256,20 @@ public class QuickTestBootstrap : MonoBehaviour
 
     GameObject MakeEnemyPrefab()
     {
+        // 1. Inspector override (used when QuickTestBootstrap is placed in the
+        //    scene manually with a prefab assigned).
+        if (enemyPrefabOverride != null)
+            return enemyPrefabOverride;
+
+        // 2. Resources fallback. Marathon/Endless modes spawn a fresh
+        //    QuickTestBootstrap GameObject at runtime, so there is no scene
+        //    object to drag a reference into. Drop a copy of your animated
+        //    Enemy prefab into Assets/Resources/Enemy.prefab and it will be
+        //    picked up automatically.
+        var resPrefab = Resources.Load<GameObject>("Enemy");
+        if (resPrefab != null)
+            return resPrefab;
+
         GameObject obj  = new GameObject("__EnemyPrefab");
         SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
         sr.color        = Color.red;
