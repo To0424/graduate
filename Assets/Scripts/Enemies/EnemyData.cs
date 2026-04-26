@@ -23,6 +23,9 @@ public class EnemyData : ScriptableObject
 
     public Sprite sprite;
 
+    [Tooltip("Optional Animator Controller. If set, the Enemy prefab's Animator will use this controller for this enemy type, allowing per-enemy animations. If null, the prefab's default controller (or the static sprite) is used.")]
+    public RuntimeAnimatorController animatorController;
+
     [Header("Archetype")]
     public EnemyArchetype archetype = EnemyArchetype.Standard;
 

@@ -430,6 +430,7 @@ public static class MarathonMode
         c.goldReward   = src.goldReward + goldBonus;
         c.courseTier   = src.courseTier;
         c.sprite       = src.sprite;
+        c.animatorController = src.animatorController;
         c.archetype    = src.archetype;
         c.shieldHealth = Mathf.Max(0, Mathf.RoundToInt(src.shieldHealth * hpMul));
         c.bossScale    = src.bossScale;

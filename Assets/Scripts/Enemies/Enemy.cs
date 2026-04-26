@@ -85,9 +85,15 @@ public class Enemy : MonoBehaviour
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
         if (sr == null) return;
 
+        // Per-enemy animator override: lets each EnemyData supply its own
+        // animation clips so different enemy types look different.
+        var animComp = GetComponent<Animator>();
+        if (animComp != null && data.animatorController != null)
+            animComp.runtimeAnimatorController = data.animatorController;
+
         // If this prefab has an Animator driving the SpriteRenderer, don't
         // overwrite its sprite or tint — let the animation play as authored.
-        bool hasAnimator = TryGetComponent<Animator>(out var anim) && anim.runtimeAnimatorController != null;
+        bool hasAnimator = animComp != null && animComp.runtimeAnimatorController != null;
         if (hasAnimator)
         {
             sr.color = Color.white;
@@ -422,6 +428,14 @@ public class Enemy : MonoBehaviour
         Transform target  = waypoints[currentWaypointIndex];
         Vector3 direction = (target.position - transform.position).normalized;
         transform.position += direction * moveSpeed * Time.deltaTime;
+
+        // Flip the sprite to face the direction of travel. The art is authored
+        // facing left, so FlipX = true when moving right.
+        if (Mathf.Abs(direction.x) > 0.01f)
+        {
+            var sr = GetComponent<SpriteRenderer>();
+            if (sr != null) sr.flipX = direction.x > 0f;
+        }
 
         if (Vector3.Distance(transform.position, target.position) < 0.1f)
             currentWaypointIndex++;
