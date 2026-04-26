@@ -7,7 +7,6 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Lightweight in-game map debug helper:
-/// - Toggle on/off with F8
 /// - P toggles edit mode: Slot / Path
 /// - Slot mode: left add slot, right remove nearest empty slot
 /// - Path mode: left add waypoint (before exit), right remove nearest waypoint
@@ -25,8 +24,16 @@ public class InGameSlotDebugEditor : MonoBehaviour
 
     public static InGameSlotDebugEditor Instance { get; private set; }
 
+    public static bool LaunchDebugRequested { get; private set; }
+    public static bool LaunchInPathMode { get; private set; } = true;
+
+    public static void RequestOpenFromMainMenu(bool startInPathMode = true)
+    {
+        LaunchDebugRequested = true;
+        LaunchInPathMode = startInPathMode;
+    }
+
     [Header("Hotkeys")]
-    public KeyCode toggleKey = KeyCode.F8;
     public KeyCode toggleModeKey = KeyCode.P;
     public KeyCode toggleConnectModeKey = KeyCode.L;
     public KeyCode cycleSpawnKey = KeyCode.Tab;
@@ -74,14 +81,19 @@ public class InGameSlotDebugEditor : MonoBehaviour
         mainCam = Camera.main;
         pathManager = FindFirstObjectByType<PathManager>();
         BuildOverlay();
-        SetDebugMode(false);
+
+        bool openNow = LaunchDebugRequested;
+        bool startInPath = LaunchInPathMode;
+        LaunchDebugRequested = false;
+
+        if (openNow && startInPath)
+            editMode = EditMode.Path;
+
+        SetDebugMode(openNow);
     }
 
     void Update()
     {
-        if (Input.GetKeyDown(toggleKey))
-            SetDebugMode(!isActive);
-
         if (!isActive) return;
 
         if (mainCam == null) mainCam = Camera.main;
@@ -272,7 +284,7 @@ public class InGameSlotDebugEditor : MonoBehaviour
         string connectText = manualConnectMode ? "ON" : "OFF";
 
         infoText.text =
-            "MAP DEBUG (F8 to close)\n" +
+            "MAP DEBUG\n" +
             "P: toggle mode (SLOT/PATH)   |   Tab: next spawn route (PATH mode)\n" +
             "L: toggle path connect mode (PATH only)\n" +
             "SLOT: Left add slot, Right remove slot   |   C copy slot coords\n" +

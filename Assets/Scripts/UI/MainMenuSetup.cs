@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement;
 using TMPro;
 
 /// <summary>
@@ -33,102 +32,47 @@ public class MainMenuSetup : MonoBehaviour
         canvasObj.AddComponent<GraphicRaycaster>();
 
         // Background panel
-        GameObject bg = CreatePanel(canvasObj.transform, "Background", new Color(0.15f, 0.15f, 0.25f, 1f));
+        GameObject bg = CreatePanel(canvasObj.transform, "Background", new Color(0.03f, 0.03f, 0.03f, 1f));
         RectTransform bgRect = bg.GetComponent<RectTransform>();
         bgRect.anchorMin = Vector2.zero;
         bgRect.anchorMax = Vector2.one;
         bgRect.sizeDelta = Vector2.zero;
+        ApplyFrontPageBackground(bg.GetComponent<Image>());
 
-        // Title
-        GameObject titleObj = CreateText(canvasObj.transform, "Title", "GRADUATION", 72, Color.white);
-        RectTransform titleRect = titleObj.GetComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0.5f, 0.7f);
-        titleRect.anchorMax = new Vector2(0.5f, 0.7f);
-        titleRect.anchoredPosition = Vector2.zero;
-        titleRect.sizeDelta = new Vector2(800, 100);
+        // Marathon Mode Button (flagship 40-wave run).
+        GameObject marathonBtn = CreateButton(canvasObj.transform, "MarathonModeButton",
+                              "MARATHON (40 WAVES)", new Color(0.85f, 0.45f, 0.1f));
+        RectTransform mRect = marathonBtn.GetComponent<RectTransform>();
+        mRect.anchorMin = new Vector2(0.5f, 0.205f);
+        mRect.anchorMax = new Vector2(0.5f, 0.205f);
+        mRect.anchoredPosition = Vector2.zero;
+        mRect.sizeDelta = new Vector2(420, 68);
+        TextMeshProUGUI mLbl = marathonBtn.GetComponentInChildren<TextMeshProUGUI>();
+        if (mLbl != null) mLbl.fontSize = 24;
+        marathonBtn.GetComponent<Button>().onClick.AddListener(OnMarathonMode);
 
-        // Subtitle
-        GameObject subObj = CreateText(canvasObj.transform, "Subtitle", "A Tower Defense Game\nHKU - Group 23", 28, new Color(0.8f, 0.8f, 0.8f));
-        RectTransform subRect = subObj.GetComponent<RectTransform>();
-        subRect.anchorMin = new Vector2(0.5f, 0.55f);
-        subRect.anchorMax = new Vector2(0.5f, 0.55f);
-        subRect.anchoredPosition = Vector2.zero;
-        subRect.sizeDelta = new Vector2(600, 80);
-
-        // Play Button (Continue)
-        GameObject playBtn = CreateButton(canvasObj.transform, "PlayButton", "CONTINUE", new Color(0.2f, 0.6f, 0.3f));
-        RectTransform playRect = playBtn.GetComponent<RectTransform>();
-        playRect.anchorMin = new Vector2(0.5f, 0.46f);
-        playRect.anchorMax = new Vector2(0.5f, 0.46f);
-        playRect.anchoredPosition = Vector2.zero;
-        playRect.sizeDelta = new Vector2(300, 70);
-        playBtn.GetComponent<Button>().onClick.AddListener(OnPlay);
-
-        // New Game Button
-        GameObject newBtn = CreateButton(canvasObj.transform, "NewGameButton", "NEW GAME", new Color(0.6f, 0.4f, 0.1f));
-        RectTransform newRect = newBtn.GetComponent<RectTransform>();
-        newRect.anchorMin = new Vector2(0.5f, 0.35f);
-        newRect.anchorMax = new Vector2(0.5f, 0.35f);
-        newRect.anchoredPosition = Vector2.zero;
-        newRect.sizeDelta = new Vector2(300, 70);
-        newBtn.GetComponent<Button>().onClick.AddListener(OnNewGame);
-
-        // Quit Button
-        GameObject quitBtn = CreateButton(canvasObj.transform, "QuitButton", "QUIT", new Color(0.6f, 0.2f, 0.2f));
-        RectTransform quitRect = quitBtn.GetComponent<RectTransform>();
-        quitRect.anchorMin = new Vector2(0.5f, 0.14f);
-        quitRect.anchorMax = new Vector2(0.5f, 0.14f);
-        quitRect.anchoredPosition = Vector2.zero;
-        quitRect.sizeDelta = new Vector2(300, 70);
-        quitBtn.GetComponent<Button>().onClick.AddListener(OnQuit);
-
-        // Testing Mode Button (developer shortcut)
-        GameObject testBtn = CreateButton(canvasObj.transform, "TestingModeButton",
-                                          "TESTING MODE", new Color(0.18f, 0.32f, 0.55f));
-        RectTransform testRect = testBtn.GetComponent<RectTransform>();
-        testRect.anchorMin = new Vector2(0.5f, 0.05f);
-        testRect.anchorMax = new Vector2(0.5f, 0.05f);
-        testRect.anchoredPosition = Vector2.zero;
-        testRect.sizeDelta = new Vector2(300, 50);
-        TextMeshProUGUI testLbl = testBtn.GetComponentInChildren<TextMeshProUGUI>();
-        if (testLbl != null) testLbl.fontSize = 22;
-        testBtn.GetComponent<Button>().onClick.AddListener(OnTestingMode);
-
-        // Map Creator Button (next to Testing Mode)
+        // Map Debugger button (launches marathon with in-game debug editor open).
         GameObject mapBtn = CreateButton(canvasObj.transform, "MapCreatorButton",
-                                          "MAP CREATOR", new Color(0.40f, 0.30f, 0.55f));
+                          "MAP DEBUGGER", new Color(0.40f, 0.30f, 0.55f));
         RectTransform mapRect = mapBtn.GetComponent<RectTransform>();
-        mapRect.anchorMin = new Vector2(0.5f, 0.05f);
-        mapRect.anchorMax = new Vector2(0.5f, 0.05f);
-        mapRect.anchoredPosition = new Vector2(330, 0);
-        mapRect.sizeDelta = new Vector2(300, 50);
+        mapRect.anchorMin = new Vector2(0.5f, 0.125f);
+        mapRect.anchorMax = new Vector2(0.5f, 0.125f);
+        mapRect.anchoredPosition = Vector2.zero;
+        mapRect.sizeDelta = new Vector2(420, 62);
         TextMeshProUGUI mapLbl = mapBtn.GetComponentInChildren<TextMeshProUGUI>();
         if (mapLbl != null) mapLbl.fontSize = 22;
         mapBtn.GetComponent<Button>().onClick.AddListener(OnMapCreator);
 
-        // Endless Mode Button (left of Testing Mode)
-        GameObject endlessBtn = CreateButton(canvasObj.transform, "EndlessModeButton",
-                                              "ENDLESS MODE", new Color(0.55f, 0.18f, 0.22f));
-        RectTransform endRect = endlessBtn.GetComponent<RectTransform>();
-        endRect.anchorMin = new Vector2(0.5f, 0.05f);
-        endRect.anchorMax = new Vector2(0.5f, 0.05f);
-        endRect.anchoredPosition = new Vector2(-330, 0);
-        endRect.sizeDelta = new Vector2(300, 50);
-        TextMeshProUGUI endLbl = endlessBtn.GetComponentInChildren<TextMeshProUGUI>();
-        if (endLbl != null) endLbl.fontSize = 22;
-        endlessBtn.GetComponent<Button>().onClick.AddListener(OnEndlessMode);
-
-        // Marathon Mode Button (above the others — flagship 40-wave run).
-        GameObject marathonBtn = CreateButton(canvasObj.transform, "MarathonModeButton",
-                                              "MARATHON (40 WAVES)", new Color(0.85f, 0.45f, 0.1f));
-        RectTransform mRect = marathonBtn.GetComponent<RectTransform>();
-        mRect.anchorMin = new Vector2(0.5f, 0.24f);
-        mRect.anchorMax = new Vector2(0.5f, 0.24f);
-        mRect.anchoredPosition = Vector2.zero;
-        mRect.sizeDelta = new Vector2(360, 56);
-        TextMeshProUGUI mLbl = marathonBtn.GetComponentInChildren<TextMeshProUGUI>();
-        if (mLbl != null) mLbl.fontSize = 24;
-        marathonBtn.GetComponent<Button>().onClick.AddListener(OnMarathonMode);
+        // Quit Button
+        GameObject quitBtn = CreateButton(canvasObj.transform, "QuitButton", "QUIT", new Color(0.6f, 0.2f, 0.2f));
+        RectTransform quitRect = quitBtn.GetComponent<RectTransform>();
+        quitRect.anchorMin = new Vector2(0.5f, 0.045f);
+        quitRect.anchorMax = new Vector2(0.5f, 0.045f);
+        quitRect.anchoredPosition = Vector2.zero;
+        quitRect.sizeDelta = new Vector2(420, 62);
+        TextMeshProUGUI qLbl = quitBtn.GetComponentInChildren<TextMeshProUGUI>();
+        if (qLbl != null) qLbl.fontSize = 22;
+        quitBtn.GetComponent<Button>().onClick.AddListener(OnQuit);
     }
 
     void OnMarathonMode()
@@ -136,42 +80,10 @@ public class MainMenuSetup : MonoBehaviour
         MarathonMode.Launch();
     }
 
-    void OnEndlessMode()
-    {
-        EndlessMode.Launch();
-    }
-
-    void OnTestingMode()
-    {
-        // Open the settings panel; it calls TestingModeLauncher.Launch() when confirmed.
-        TestingModeSettingsPanel.Open();
-    }
-
     void OnMapCreator()
     {
-        MapCreator.LaunchOverlay();
-    }
-
-    void OnPlay()
-    {
-        if (GameManager.Instance != null)
-            GameManager.Instance.GoToOverworld();
-        else
-            SceneManager.LoadScene("Overworld");
-    }
-
-    void OnNewGame()
-    {
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.ResetAllProgress();
-            GameManager.Instance.GoToOverworld();
-        }
-        else
-        {
-            PlayerPrefs.DeleteAll();
-            SceneManager.LoadScene("Overworld");
-        }
+        InGameSlotDebugEditor.RequestOpenFromMainMenu(startInPathMode: true);
+        MarathonMode.Launch();
     }
 
     void OnQuit()
@@ -181,6 +93,36 @@ public class MainMenuSetup : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    void ApplyFrontPageBackground(Image bgImage)
+    {
+        if (bgImage == null) return;
+
+        // Prefer the dedicated front-page image; fall back to the previous marathon art.
+        Sprite frontPage = Resources.Load<Sprite>("HKU");
+        if (frontPage == null)
+            frontPage = Resources.Load<Sprite>("MarathonBackground");
+
+        if (frontPage != null)
+        {
+            bgImage.sprite = frontPage;
+            bgImage.color = Color.white;
+            bgImage.type = Image.Type.Simple;
+            bgImage.preserveAspect = true;
+
+            // Adapt fitting by shape: wide images fill screen, tall/boxy images stay fully visible.
+            AspectRatioFitter fitter = bgImage.GetComponent<AspectRatioFitter>();
+            if (fitter == null)
+                fitter = bgImage.gameObject.AddComponent<AspectRatioFitter>();
+
+            float spriteAspect = frontPage.rect.width / Mathf.Max(1f, frontPage.rect.height);
+            float screenAspect = Screen.width / Mathf.Max(1f, Screen.height);
+            fitter.aspectRatio = spriteAspect;
+            fitter.aspectMode = spriteAspect >= screenAspect
+                ? AspectRatioFitter.AspectMode.EnvelopeParent
+                : AspectRatioFitter.AspectMode.FitInParent;
+        }
     }
 
     // --- UI Helpers ---

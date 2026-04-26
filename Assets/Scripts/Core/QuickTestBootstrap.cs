@@ -822,25 +822,35 @@ public class QuickTestBootstrap : MonoBehaviour
         p.waypointPositions = chains[0].positions;
         p.exitPosition      = home;
 
-        // Tower slots — laid out roughly where the blue squares are in the
-        // sketch. Left-side cluster guards the always-active mid avenue;
-        // right-side cluster covers the routes that unlock later.
+        // Tower slots — user-tuned layout.
         p.towerSlotPositions = new Vector3[]
         {
-            // ── Left half (covers spawns 0 and 1) ─────────────────────────
-            new Vector3(-12f,  3f, 0f), new Vector3( -8f,  4f, 0f),
-            new Vector3( -7f,  0f, 0f), new Vector3( -5f,  3f, 0f),
-            new Vector3( -3f,  0f, 0f), new Vector3(-11f, -1f, 0f),
-            new Vector3(-13f,  3f, 0f),
-            // ── Right half (covers spawns 2–5) ────────────────────────────
-            new Vector3(  5f,  3.5f, 0f), new Vector3(  3f,  2f, 0f),
-            new Vector3(  7f,  4f, 0f),  new Vector3( 10f,  5f, 0f),
-            new Vector3( 11f,  2f, 0f),  new Vector3(  6f,  0.5f, 0f),
-            new Vector3(  8f, -1f, 0f),  new Vector3(  4f, -2.5f, 0f),
-            new Vector3( 11f, -3f, 0f),  new Vector3( 12f,  1.5f, 0f),
-            new Vector3(  2f, -3f, 0f),  new Vector3(  7f, -4.5f, 0f),
-            // ── Home approach (last line of defence around the base) ──────
-            new Vector3( -0.5f, -2.5f, 0f), new Vector3( 2.5f, -2f, 0f),
+            new Vector3(-13f, 3f, 0f),
+            new Vector3(-12f, 3f, 0f),
+            new Vector3(-11f, -1f, 0f),
+            new Vector3(-10f, 2f, 0f),
+            new Vector3(-9f, 0f, 0f),
+            new Vector3(-7f, 0f, 0f),
+            new Vector3(-6.5f, 4f, 0f),
+            new Vector3(-4.5f, 3f, 0f),
+            new Vector3(-4f, -0.5f, 0f),
+            new Vector3(-2.5f, 2.5f, 0f),
+            new Vector3(-1.5f, -1.5f, 0f),
+            new Vector3(-0.5f, -2.5f, 0f),
+            new Vector3(-0.5f, 1.5f, 0f),
+            new Vector3(0.5f, 0.5f, 0f),
+            new Vector3(2f, -3f, 0f),
+            new Vector3(3f, 2f, 0f),
+            new Vector3(5f, -4f, 0f),
+            new Vector3(5f, 3.5f, 0f),
+            new Vector3(6f, 0.5f, 0f),
+            new Vector3(7f, -4.5f, 0f),
+            new Vector3(7f, -2f, 0f),
+            new Vector3(8.5f, 2f, 0f),
+            new Vector3(10f, 5f, 0f),
+            new Vector3(11f, -3f, 0f),
+            new Vector3(11f, 2f, 0f),
+            new Vector3(12f, 1.5f, 0f),
         };
         return p;
     }
