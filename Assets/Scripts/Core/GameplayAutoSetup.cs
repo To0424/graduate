@@ -58,12 +58,6 @@ public class GameplayAutoSetup : MonoBehaviour
     private GameObject levelLostPanel;
     private GameObject graduationPanel;
     private TextMeshProUGUI creditsEarnedText;
-    private TextMeshProUGUI spEarnedText;
-
-    // Skill tree
-    private SkillTreeUI skillTreeUI;
-    private Button skillTreeOpenButton;
-    private TextMeshProUGUI skillTreeToggleLabel;
 
     // Collapsible side shops
     private GameObject towerShopPanel;
@@ -91,7 +85,6 @@ public class GameplayAutoSetup : MonoBehaviour
         EnsureStarterAndUnlockedProfessors();
         CreateBuildAndUpgradeUI(canvas);
         CreateTowerShop(canvas.transform);
-        CreateSkillTreeUI(canvas.transform);
         CreateGameOverUI(canvas.transform);
         CreateHeroSkillUI(canvas.transform);
         CreateRoundCompleteBanner(canvas);
@@ -157,18 +150,6 @@ public class GameplayAutoSetup : MonoBehaviour
         BuildShopPanel(parent, "TowerShopPanel", "TOWERS",
                        new Vector2(0f, 0f), new Vector2(0.10f, 0.85f),
                        regulars, isProfessor: false);
-    }
-
-    /// <summary>
-    /// Builds an in-game Skill Tree window (initially hidden). Opened via the
-    /// "Skill Tree" button in the top bar. Useful when entering Gameplay
-    /// directly via QuickTestBootstrap (no Overworld).
-    /// </summary>
-    void CreateSkillTreeUI(Transform parent)
-    {
-        GameObject st = new GameObject("SkillTreeUI");
-        skillTreeUI = st.AddComponent<SkillTreeUI>();
-        skillTreeUI.Build(parent);
     }
 
     // ========== MANAGERS ==========
@@ -322,19 +303,11 @@ public class GameplayAutoSetup : MonoBehaviour
         if (heroShopToggleLabel) heroShopToggleLabel.fontSize = 24;
         heroShopToggleButton.onClick.AddListener(ToggleHeroShopPanel);
 
-        // Skill Tree toggle (open/close)
-        GameObject stBtn = CreateCircularButton(parent, "SkillTreeBtn", "S+", new Color(0.25f, 0.18f, 0.55f));
-        SetAnchored(stBtn, new Vector2(0.05f, 0.21f), new Vector2(72, 72));
-        skillTreeOpenButton = stBtn.GetComponent<Button>();
-        skillTreeToggleLabel = stBtn.GetComponentInChildren<TextMeshProUGUI>();
-        if (skillTreeToggleLabel) skillTreeToggleLabel.fontSize = 24;
-        skillTreeOpenButton.onClick.AddListener(ToggleSkillTreePanel);
-
         // Buff history toggle for marathon runs.
         if (MarathonMode.IsActive)
         {
             GameObject buffBtn = CreateCircularButton(parent, "BuffHistoryBtn", "B+", new Color(0.18f, 0.5f, 0.45f));
-            SetAnchored(buffBtn, new Vector2(0.05f, 0.30f), new Vector2(72, 72));
+            SetAnchored(buffBtn, new Vector2(0.05f, 0.21f), new Vector2(72, 72));
             buffHistoryToggleButton = buffBtn.GetComponent<Button>();
             buffHistoryToggleLabel = buffBtn.GetComponentInChildren<TextMeshProUGUI>();
             if (buffHistoryToggleLabel) buffHistoryToggleLabel.fontSize = 24;
@@ -428,15 +401,6 @@ public class GameplayAutoSetup : MonoBehaviour
         BringControlButtonsToFront();
     }
 
-    void ToggleSkillTreePanel()
-    {
-        if (skillTreeUI == null) return;
-        if (skillTreeUI.IsOpen) skillTreeUI.Close();
-        else                    skillTreeUI.Open();
-        SyncNavButtonLabels();
-        BringControlButtonsToFront();
-    }
-
     void ToggleBuffHistoryPanel()
     {
         if (buffHistoryPanel == null) return;
@@ -450,24 +414,38 @@ public class GameplayAutoSetup : MonoBehaviour
 
     void CreateBuffHistoryPanel(Transform parent)
     {
-        buffHistoryPanel = CreatePanel(parent, "BuffHistoryPanel", new Color(0f, 0f, 0f, 0.78f));
+        buffHistoryPanel = CreatePanel(parent, "BuffHistoryPanel", new Color(0.04f, 0.09f, 0.12f, 1f));
         RectTransform rt = buffHistoryPanel.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0.12f, 0.16f);
-        rt.anchorMax = new Vector2(0.42f, 0.76f);
+        rt.anchorMin = new Vector2(0.10f, 0.14f);
+        rt.anchorMax = new Vector2(0.48f, 0.82f);
         rt.offsetMin = Vector2.zero;
         rt.offsetMax = Vector2.zero;
 
-        GameObject title = CreateText(buffHistoryPanel.transform, "BuffHistoryTitle", "Buff Picks", 30, Color.white);
+        GameObject header = CreatePanel(buffHistoryPanel.transform, "HeaderBar", new Color(0.13f, 0.38f, 0.40f, 1f));
+        RectTransform hr = header.GetComponent<RectTransform>();
+        hr.anchorMin = new Vector2(0f, 0.88f);
+        hr.anchorMax = new Vector2(1f, 1f);
+        hr.offsetMin = Vector2.zero;
+        hr.offsetMax = Vector2.zero;
+
+        GameObject title = CreateText(buffHistoryPanel.transform, "BuffHistoryTitle", "Buff Picks", 36, new Color(1f, 0.96f, 0.82f));
         RectTransform tr = title.GetComponent<RectTransform>();
         tr.anchorMin = new Vector2(0f, 0.88f);
         tr.anchorMax = new Vector2(1f, 1f);
         tr.offsetMin = Vector2.zero;
         tr.offsetMax = Vector2.zero;
 
-        GameObject body = CreateText(buffHistoryPanel.transform, "BuffHistoryBody", "No buffs chosen yet.", 20, new Color(0.88f, 0.9f, 1f));
+        GameObject bodyFrame = CreatePanel(buffHistoryPanel.transform, "BuffHistoryBodyFrame", new Color(0.07f, 0.15f, 0.20f, 1f));
+        RectTransform fr = bodyFrame.GetComponent<RectTransform>();
+        fr.anchorMin = new Vector2(0.04f, 0.05f);
+        fr.anchorMax = new Vector2(0.96f, 0.85f);
+        fr.offsetMin = Vector2.zero;
+        fr.offsetMax = Vector2.zero;
+
+        GameObject body = CreateText(bodyFrame.transform, "BuffHistoryBody", "No buffs chosen yet.", 24, new Color(0.92f, 0.95f, 1f));
         RectTransform br = body.GetComponent<RectTransform>();
-        br.anchorMin = new Vector2(0.06f, 0.06f);
-        br.anchorMax = new Vector2(0.94f, 0.86f);
+        br.anchorMin = new Vector2(0.05f, 0.05f);
+        br.anchorMax = new Vector2(0.95f, 0.95f);
         br.offsetMin = Vector2.zero;
         br.offsetMax = Vector2.zero;
 
@@ -477,6 +455,7 @@ public class GameplayAutoSetup : MonoBehaviour
             buffHistoryBody.alignment = TextAlignmentOptions.TopLeft;
             buffHistoryBody.enableWordWrapping = true;
             buffHistoryBody.overflowMode = TextOverflowModes.Overflow;
+            buffHistoryBody.lineSpacing = 8f;
         }
 
         buffHistoryPanel.SetActive(false);
@@ -506,8 +485,6 @@ public class GameplayAutoSetup : MonoBehaviour
             towerShopToggleLabel.text = (towerShopPanel != null && towerShopPanel.activeSelf) ? "T-" : "T+";
         if (heroShopToggleLabel != null)
             heroShopToggleLabel.text = (heroShopPanel != null && heroShopPanel.activeSelf) ? "H-" : "H+";
-        if (skillTreeToggleLabel != null)
-            skillTreeToggleLabel.text = (skillTreeUI != null && skillTreeUI.IsOpen) ? "S-" : "S+";
         if (buffHistoryToggleLabel != null)
             buffHistoryToggleLabel.text = (buffHistoryPanel != null && buffHistoryPanel.activeSelf) ? "B-" : "B+";
     }
@@ -517,7 +494,6 @@ public class GameplayAutoSetup : MonoBehaviour
         // Keep the compact control row always clickable above any opened panel.
         if (towerShopToggleButton != null) towerShopToggleButton.transform.SetAsLastSibling();
         if (heroShopToggleButton != null) heroShopToggleButton.transform.SetAsLastSibling();
-        if (skillTreeOpenButton != null)  skillTreeOpenButton.transform.SetAsLastSibling();
         if (buffHistoryToggleButton != null) buffHistoryToggleButton.transform.SetAsLastSibling();
     }
 
@@ -708,7 +684,7 @@ public class GameplayAutoSetup : MonoBehaviour
         if (professorTowers.Count > 0)
         {
             heroShopPanel = BuildShopPanel(parent, "ProfessorShopPanel", "HEROES",
-                                           new Vector2(0.93f, 0.10f), new Vector2(1f, 0.85f),
+                                           new Vector2(0.86f, 0.10f), new Vector2(0.995f, 0.87f),
                                            professorTowers, isProfessor: true);
             heroShopPanel.SetActive(false);
         }
@@ -749,8 +725,8 @@ public class GameplayAutoSetup : MonoBehaviour
                               bool isProfessor)
     {
         Color panelBg = isProfessor
-            ? new Color(0.10f, 0.07f, 0f, 0.55f)   // warm dark gold tint for heroes
-            : new Color(0f, 0f, 0f, 0.5f);
+            ? new Color(0.12f, 0.08f, 0.02f, 1f)   // solid warm dark-gold hero panel
+            : new Color(0f, 0f, 0f, 0.82f);
 
         GameObject shopPanel = CreatePanel(parent, panelName, panelBg);
         RectTransform spRect = shopPanel.GetComponent<RectTransform>();
@@ -760,12 +736,24 @@ public class GameplayAutoSetup : MonoBehaviour
         spRect.offsetMin = Vector2.zero;
         spRect.offsetMax = Vector2.zero;
 
+        // Solid header bar for clearer visual hierarchy.
+        Color headerBg = isProfessor
+            ? new Color(0.70f, 0.49f, 0.10f, 1f)
+            : new Color(0.20f, 0.30f, 0.45f, 1f);
+        GameObject headerBar = CreatePanel(shopPanel.transform, "HeaderBar", headerBg);
+        RectTransform hbRect = headerBar.GetComponent<RectTransform>();
+        hbRect.anchorMin = new Vector2(0f, 0.89f);
+        hbRect.anchorMax = new Vector2(1f, 1f);
+        hbRect.offsetMin = Vector2.zero;
+        hbRect.offsetMax = Vector2.zero;
+
         // Title
-        Color titleColor = isProfessor ? new Color(1f, 0.82f, 0.1f) : Color.white;
-        GameObject shopTitle = CreateText(shopPanel.transform, "ShopTitle", title, 22, titleColor);
+        Color titleColor = isProfessor ? new Color(0.10f, 0.06f, 0.01f) : Color.white;
+        int titleSize = isProfessor ? 30 : 22;
+        GameObject shopTitle = CreateText(shopPanel.transform, "ShopTitle", title, titleSize, titleColor);
         RectTransform stRect = shopTitle.GetComponent<RectTransform>();
-        stRect.anchorMin = new Vector2(0, 0.92f);
-        stRect.anchorMax = new Vector2(1, 1);
+        stRect.anchorMin = new Vector2(0f, 0.90f);
+        stRect.anchorMax = new Vector2(1f, 1f);
         stRect.sizeDelta = Vector2.zero;
         stRect.offsetMin = Vector2.zero;
         stRect.offsetMax = Vector2.zero;
@@ -773,32 +761,36 @@ public class GameplayAutoSetup : MonoBehaviour
         // Subtitle for professors
         if (isProfessor)
         {
-            GameObject sub = CreateText(shopPanel.transform, "SubTitle", "place on\nbuilt tower", 13, new Color(0.8f, 0.7f, 0.4f));
+            GameObject sub = CreateText(shopPanel.transform, "SubTitle", "Select hero and place on built tower", 18, new Color(0.96f, 0.93f, 0.82f));
             RectTransform subRT = sub.GetComponent<RectTransform>();
-            subRT.anchorMin = new Vector2(0, 0.84f);
-            subRT.anchorMax = new Vector2(1, 0.93f);
+            subRT.anchorMin = new Vector2(0.03f, 0.82f);
+            subRT.anchorMax = new Vector2(0.97f, 0.89f);
             subRT.sizeDelta = Vector2.zero;
             subRT.offsetMin = Vector2.zero;
             subRT.offsetMax = Vector2.zero;
         }
 
-        // Explicit panel close button so the player can always hide shop UI.
-        GameObject closeBtn = CreateButton(shopPanel.transform, "CloseBtn", "X", new Color(0.2f, 0.2f, 0.2f, 0.9f));
-        SetAnchored(closeBtn, new Vector2(0.92f, 0.955f), new Vector2(38, 30));
-        TextMeshProUGUI closeLabel = closeBtn.GetComponentInChildren<TextMeshProUGUI>();
-        if (closeLabel != null) closeLabel.fontSize = 18;
-        closeBtn.GetComponent<Button>().onClick.AddListener(() =>
+        // Only regular tower shop keeps an explicit close button.
+        // Hero shop is controlled by the left-circle toggle now.
+        if (!isProfessor)
         {
-            shopPanel.SetActive(false);
-            SyncNavButtonLabels();
-            BringControlButtonsToFront();
-        });
+            GameObject closeBtn = CreateButton(shopPanel.transform, "CloseBtn", "X", new Color(0.2f, 0.2f, 0.2f, 0.9f));
+            SetAnchored(closeBtn, new Vector2(0.92f, 0.955f), new Vector2(38, 30));
+            TextMeshProUGUI closeLabel = closeBtn.GetComponentInChildren<TextMeshProUGUI>();
+            if (closeLabel != null) closeLabel.fontSize = 18;
+            closeBtn.GetComponent<Button>().onClick.AddListener(() =>
+            {
+                shopPanel.SetActive(false);
+                SyncNavButtonLabels();
+                BringControlButtonsToFront();
+            });
+        }
 
         // Tower buttons. Cap per-button height so a 1-hero list doesn't
         // produce a giant button that fills the entire panel.
-        float startY     = isProfessor ? 0.82f : 0.88f;
+        float startY     = isProfessor ? 0.80f : 0.88f;
         float totalSpace = startY;
-        float maxStep    = isProfessor ? 0.16f : 0.18f;  // <= ~16-18% of panel height
+        float maxStep    = isProfessor ? 0.19f : 0.18f;  // taller hero buttons for larger text
         float yStep      = Mathf.Min(maxStep, totalSpace / Mathf.Max(towers.Count, 1));
 
         for (int i = 0; i < towers.Count; i++)
@@ -807,7 +799,7 @@ public class GameplayAutoSetup : MonoBehaviour
             bool prof    = isProfessor;
 
             Color btnColor = prof
-                ? new Color(0.55f, 0.38f, 0.05f)
+                ? new Color(0.30f, 0.20f, 0.05f)
                 : Tower.GetTowerColor(td.towerType) * 0.7f;
             btnColor.a = 1f;
 
@@ -826,7 +818,11 @@ public class GameplayAutoSetup : MonoBehaviour
             btnRect.offsetMax = Vector2.zero;
 
             TextMeshProUGUI tmpLabel = btn.GetComponentInChildren<TextMeshProUGUI>();
-            if (tmpLabel) tmpLabel.fontSize = 16;
+            if (tmpLabel)
+            {
+                tmpLabel.fontSize = prof ? 20 : 16;
+                tmpLabel.fontStyle = FontStyles.Bold;
+            }
 
             btn.GetComponent<Button>().onClick.AddListener(() => OnTowerSelected(td, prof));
         }
@@ -878,10 +874,6 @@ public class GameplayAutoSetup : MonoBehaviour
         GameObject ceObj = CreateText(levelWonPanel.transform, "CreditsEarned", "+0 Credits", 32, Color.yellow);
         SetAnchored(ceObj, new Vector2(0.5f, 0.55f), new Vector2(400, 40));
         creditsEarnedText = ceObj.GetComponent<TextMeshProUGUI>();
-
-        GameObject spObj = CreateText(levelWonPanel.transform, "SPEarned", "+0 Skill Points", 28, Color.cyan);
-        SetAnchored(spObj, new Vector2(0.5f, 0.48f), new Vector2(400, 40));
-        spEarnedText = spObj.GetComponent<TextMeshProUGUI>();
 
         string continueLabel = MarathonMode.IsActive ? "Main Menu" : "Continue";
         GameObject contBtn = CreateButton(levelWonPanel.transform, "ContinueBtn", continueLabel, new Color(0.2f, 0.6f, 0.3f));
@@ -949,12 +941,10 @@ public class GameplayAutoSetup : MonoBehaviour
                     if (isReplay)
                     {
                         creditsEarnedText.text = "Already Completed";
-                        spEarnedText.text = "(No additional rewards)";
                     }
                     else
                     {
                         creditsEarnedText.text = $"+{level.creditsReward} Credits";
-                        spEarnedText.text = $"+{level.skillPointsReward} Skill Points";
                     }
                 }
                 break;

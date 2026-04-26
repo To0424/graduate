@@ -21,12 +21,6 @@ public class LivesManager : MonoBehaviour
     {
         lives = amount;
 
-        if (SkillTreeManager.Instance != null)
-        {
-            BuffEffect buffs = SkillTreeManager.Instance.GetTotalBuffs();
-            lives += buffs.bonusLives;
-        }
-
         OnLivesChanged?.Invoke(lives);
     }
 

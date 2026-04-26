@@ -21,13 +21,6 @@ public class CurrencyManager : MonoBehaviour
     {
         gold = amount;
 
-        // Apply skill tree bonus
-        if (SkillTreeManager.Instance != null)
-        {
-            BuffEffect buffs = SkillTreeManager.Instance.GetTotalBuffs();
-            gold += buffs.bonusStartGold;
-        }
-
         OnGoldChanged?.Invoke(gold);
     }
 

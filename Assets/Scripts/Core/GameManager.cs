@@ -110,7 +110,6 @@ public class GameManager : MonoBehaviour
             if (firstClear)
             {
                 CreditManager.Instance.AddCredits(level.creditsReward);
-                SkillPointManager.Instance.AddSkillPoints(level.skillPointsReward);
                 completedCourses.Add(key);
             }
 
@@ -175,10 +174,6 @@ public class GameManager : MonoBehaviour
 
         if (CreditManager.Instance != null)
             CreditManager.Instance.ResetCredits();
-        if (SkillPointManager.Instance != null)
-            SkillPointManager.Instance.ResetSkillPoints();
-        if (SkillTreeManager.Instance != null)
-            SkillTreeManager.Instance.ResetTree();
 
         PlayerPrefs.Save();
         Debug.Log("[GameManager] All progress reset!");
@@ -205,6 +200,5 @@ public class GameManager : MonoBehaviour
         }
 
         CreditManager.Instance?.Load();
-        SkillPointManager.Instance?.Load();
     }
 }
