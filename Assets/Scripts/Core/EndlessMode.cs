@@ -167,6 +167,9 @@ public static class EndlessMode
         c.courseTier   = src.courseTier;
         c.sprite       = src.sprite;
         c.animatorController = src.animatorController;
+        c.flipWithDirection  = src.flipWithDirection;
+        c.artFacesRight      = src.artFacesRight;
+        c.visualScale        = src.visualScale;
         c.archetype    = src.archetype;
         c.shieldHealth = Mathf.Max(0, Mathf.RoundToInt(src.shieldHealth * hpMul));
         c.bossScale    = src.bossScale;

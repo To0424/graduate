@@ -26,6 +26,14 @@ public class EnemyData : ScriptableObject
     [Tooltip("Optional Animator Controller. If set, the Enemy prefab's Animator will use this controller for this enemy type, allowing per-enemy animations. If null, the prefab's default controller (or the static sprite) is used.")]
     public RuntimeAnimatorController animatorController;
 
+    [Header("Sprite Orientation & Size")]
+    [Tooltip("Disable to skip horizontal flipping based on travel direction (useful if the animation already handles facing or has no clear left/right pose).")]
+    public bool flipWithDirection = true;
+    [Tooltip("Set true if this enemy's art is authored facing RIGHT. Default art is assumed to face LEFT.")]
+    public bool artFacesRight = false;
+    [Tooltip("Uniform scale multiplier applied to the enemy. Use to make sprites bigger or smaller without re-importing.")]
+    public float visualScale = 1f;
+
     [Header("Archetype")]
     public EnemyArchetype archetype = EnemyArchetype.Standard;
 

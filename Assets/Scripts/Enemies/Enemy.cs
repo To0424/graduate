@@ -78,6 +78,11 @@ public class Enemy : MonoBehaviour
 
         if (waypoints.Length > 0)
             transform.position = waypoints[0].position;
+
+        // Apply per-enemy visual scale (Boss may overwrite this in
+        // ApplyArchetypeVisuals using its own bossScale).
+        if (data.visualScale > 0f)
+            transform.localScale = Vector3.one * data.visualScale;
     }
 
     void ApplyArchetypeVisuals()
@@ -429,12 +434,17 @@ public class Enemy : MonoBehaviour
         Vector3 direction = (target.position - transform.position).normalized;
         transform.position += direction * moveSpeed * Time.deltaTime;
 
-        // Flip the sprite to face the direction of travel. The art is authored
-        // facing left, so FlipX = true when moving right.
-        if (Mathf.Abs(direction.x) > 0.01f)
+        // Flip the sprite to face the direction of travel. Each EnemyData
+        // can opt out and can declare whether its art is authored facing
+        // right (default assumption is left).
+        if (data.flipWithDirection && Mathf.Abs(direction.x) > 0.01f)
         {
             var sr = GetComponent<SpriteRenderer>();
-            if (sr != null) sr.flipX = direction.x > 0f;
+            if (sr != null)
+            {
+                bool movingRight = direction.x > 0f;
+                sr.flipX = data.artFacesRight ? !movingRight : movingRight;
+            }
         }
 
         if (Vector3.Distance(transform.position, target.position) < 0.1f)

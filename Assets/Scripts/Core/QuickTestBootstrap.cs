@@ -281,6 +281,8 @@ public class QuickTestBootstrap : MonoBehaviour
         basic.maxHealth  = 80;
         basic.goldReward = 10;
         basic.courseTier = 1;
+        basic.artFacesRight = true;
+        basic.visualScale   = 0.5f;  
         basic.archetype  = EnemyArchetype.Standard;
 
         EnemyData fast = ScriptableObject.CreateInstance<EnemyData>();
@@ -290,6 +292,9 @@ public class QuickTestBootstrap : MonoBehaviour
         fast.goldReward  = 15;
         fast.courseTier  = 1;
         fast.archetype   = EnemyArchetype.Standard;
+        // Speedy enemies use the original dorotest animation; everything else
+        // falls back to the Enemy prefab's default controller (dog_baton).
+        fast.animatorController = Resources.Load<RuntimeAnimatorController>("Animators/dorotest");
 
         EnemyData tank = ScriptableObject.CreateInstance<EnemyData>();
         tank.enemyName   = "Tank Bug";
