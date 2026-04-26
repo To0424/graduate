@@ -104,7 +104,7 @@ public class BuildAndUpgradeUI : MonoBehaviour
         _radialRoot = new GameObject("RadialBuildMenu");
         _radialRoot.transform.SetParent(_canvas.transform, false);
         var rt = _radialRoot.AddComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(360, 360);
+        rt.sizeDelta = new Vector2(540, 540);
         _radialRoot.SetActive(false);
     }
 
@@ -131,61 +131,124 @@ public class BuildAndUpgradeUI : MonoBehaviour
         for (int i = _radialRoot.transform.childCount - 1; i >= 0; i--)
             Destroy(_radialRoot.transform.GetChild(i).gameObject);
 
-        if (availableOptions == null || availableOptions.Length == 0) return;
-
-        // Filter: skip uniques already deployed
+        // Filter: regular towers only (no heroes), and skip deployed uniques.
         var visible = new System.Collections.Generic.List<TowerData>();
-        foreach (TowerData td in availableOptions)
+        if (availableOptions != null)
         {
-            if (td == null) continue;
-            if (td.unique && DeployedUniqueRegistry.IsDeployed(td)) continue;
-            visible.Add(td);
+            foreach (TowerData td in availableOptions)
+            {
+                if (td == null) continue;
+                if (td.isProfessorTower) continue;
+                if (td.unique && DeployedUniqueRegistry.IsDeployed(td)) continue;
+                visible.Add(td);
+            }
         }
 
-        const float radius = 120f;
-        int count = visible.Count;
-        for (int i = 0; i < count; i++)
+        if (visible.Count == 0)
         {
-            TowerData td = visible[i];
-            float angle = (i / (float)count) * Mathf.PI * 2f - Mathf.PI / 2f;
-            Vector2 pos = new Vector2(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius);
+            GameObject none = MakeText(_radialRoot.transform, "NoOptions", "No regular towers", 20, new Color(0.90f, 0.93f, 0.98f));
+            RectTransform nrt = none.GetComponent<RectTransform>();
+            nrt.anchorMin = nrt.anchorMax = new Vector2(0.5f, 0.5f);
+            nrt.anchoredPosition = new Vector2(0f, 64f);
+            nrt.sizeDelta = new Vector2(260f, 56f);
 
-            bool affordable = CurrencyManager.Instance != null &&
-                              CurrencyManager.Instance.CanAfford(td.cost);
-
-            Color baseCol = td.isProfessorTower
-                ? new Color(0.55f, 0.38f, 0.05f)
-                : Tower.GetTowerColor(td.towerType) * 0.7f;
-            baseCol.a = 1f;
-            if (!affordable) baseCol = Color.Lerp(baseCol, Color.gray, 0.6f);
-
-            GameObject btn = MakeButton(_radialRoot.transform, $"R_{td.towerName}",
-                                        $"{td.towerName}\n{td.cost}g", baseCol);
-            var brt = btn.GetComponent<RectTransform>();
-            brt.anchorMin = brt.anchorMax = new Vector2(0.5f, 0.5f);
-            brt.anchoredPosition = pos;
-            brt.sizeDelta = new Vector2(110, 80);
-
-            TowerData captured = td;
-            TowerSlot capSlot  = slot;
-            btn.GetComponent<Button>().onClick.AddListener(() =>
+            GameObject cancelOnly = MakeButton(_radialRoot.transform, "Cancel", "X", new Color(0.28f, 0.28f, 0.33f, 1f));
+            RectTransform cot = cancelOnly.GetComponent<RectTransform>();
+            cot.anchorMin = cot.anchorMax = new Vector2(0.5f, 0.5f);
+            cot.anchoredPosition = Vector2.zero;
+            cot.sizeDelta = new Vector2(68f, 68f);
+            TextMeshProUGUI cOnlyLabel = cancelOnly.GetComponentInChildren<TextMeshProUGUI>();
+            if (cOnlyLabel != null)
             {
-                if (TowerPlacement.Instance != null)
-                {
-                    TowerPlacement.Instance.SetTowerPrefab(towerPrefab);
-                    TowerPlacement.Instance.PlaceAtSlot(captured, capSlot);
-                }
-                CloseMenus();
-            });
+                cOnlyLabel.fontSize = 24;
+                cOnlyLabel.fontStyle = FontStyles.Bold;
+            }
+            cancelOnly.GetComponent<Button>().onClick.AddListener(CloseMenus);
+            return;
+        }
+
+        const float innerRadius = 120f;
+        const float outerRadius = 202f;
+        const int innerCapacity = 6;
+        Vector2 btnSize = new Vector2(126f, 90f);
+
+        int innerCount = Mathf.Min(innerCapacity, visible.Count);
+        int outerCount = visible.Count - innerCount;
+
+        for (int i = 0; i < innerCount; i++)
+        {
+            float angle = innerCount == 1
+                ? -Mathf.PI * 0.5f
+                : (i / (float)innerCount) * Mathf.PI * 2f - Mathf.PI * 0.5f;
+            Vector2 pos = new Vector2(Mathf.Cos(angle) * innerRadius, Mathf.Sin(angle) * innerRadius);
+            AddRadialBuildOption(visible[i], slot, pos, btnSize);
+        }
+
+        for (int i = 0; i < outerCount; i++)
+        {
+            float angle = outerCount == 1
+                ? -Mathf.PI * 0.5f
+                : (i / (float)outerCount) * Mathf.PI * 2f - Mathf.PI * 0.5f;
+            Vector2 pos = new Vector2(Mathf.Cos(angle) * outerRadius, Mathf.Sin(angle) * outerRadius);
+            AddRadialBuildOption(visible[innerCount + i], slot, pos, btnSize);
         }
 
         // Center cancel button
-        GameObject cancel = MakeButton(_radialRoot.transform, "Cancel", "✕", new Color(0.3f, 0.3f, 0.3f));
-        var crt = cancel.GetComponent<RectTransform>();
+        GameObject cancel = MakeButton(_radialRoot.transform, "Cancel", "X", new Color(0.30f, 0.30f, 0.35f, 1f));
+        RectTransform crt = cancel.GetComponent<RectTransform>();
         crt.anchorMin = crt.anchorMax = new Vector2(0.5f, 0.5f);
         crt.anchoredPosition = Vector2.zero;
-        crt.sizeDelta = new Vector2(64, 64);
+        crt.sizeDelta = new Vector2(72f, 72f);
+        TextMeshProUGUI cLbl = cancel.GetComponentInChildren<TextMeshProUGUI>();
+        if (cLbl != null)
+        {
+            cLbl.fontSize = 26;
+            cLbl.fontStyle = FontStyles.Bold;
+        }
         cancel.GetComponent<Button>().onClick.AddListener(CloseMenus);
+    }
+
+    void AddRadialBuildOption(TowerData td, TowerSlot slot, Vector2 pos, Vector2 size)
+    {
+        bool affordable = CurrencyManager.Instance != null &&
+                          CurrencyManager.Instance.CanAfford(td.cost);
+
+        Color baseCol = Tower.GetTowerColor(td.towerType) * 0.72f;
+        baseCol.a = 1f;
+        if (!affordable) baseCol = Color.Lerp(baseCol, Color.gray, 0.62f);
+
+        GameObject btn = MakeButton(_radialRoot.transform, $"R_{td.towerName}",
+                                    $"{td.towerName}\n{td.cost}g", baseCol);
+        RectTransform brt = btn.GetComponent<RectTransform>();
+        brt.anchorMin = brt.anchorMax = new Vector2(0.5f, 0.5f);
+        brt.anchoredPosition = pos;
+        brt.sizeDelta = size;
+
+        TextMeshProUGUI lbl = btn.GetComponentInChildren<TextMeshProUGUI>();
+        if (lbl != null)
+        {
+            lbl.fontSize = 18;
+            lbl.enableAutoSizing = true;
+            lbl.fontSizeMax = 18;
+            lbl.fontSizeMin = 11;
+            lbl.fontStyle = FontStyles.Bold;
+            lbl.enableWordWrapping = true;
+            lbl.overflowMode = TextOverflowModes.Ellipsis;
+            lbl.lineSpacing = 2f;
+            lbl.margin = new Vector4(6f, 4f, 6f, 4f);
+        }
+
+        TowerData captured = td;
+        TowerSlot capSlot = slot;
+        btn.GetComponent<Button>().onClick.AddListener(() =>
+        {
+            if (TowerPlacement.Instance != null)
+            {
+                TowerPlacement.Instance.SetTowerPrefab(towerPrefab);
+                TowerPlacement.Instance.PlaceAtSlot(captured, capSlot);
+            }
+            CloseMenus();
+        });
     }
 
     // ────────────────────────────────────────────────────────────────────────

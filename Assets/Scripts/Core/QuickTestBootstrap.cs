@@ -177,54 +177,7 @@ public class QuickTestBootstrap : MonoBehaviour
 
         GameManager gm = go.AddComponent<GameManager>();
 
-        SkillTreeData st = ScriptableObject.CreateInstance<SkillTreeData>();
-        st.nodes = new SkillNode[]
-        {
-            new SkillNode
-            {
-                nodeName              = "Tutoring",
-                description           = "+10% damage",
-                cost                  = 1,
-                section               = SkillSection.Social,
-                buff                  = new BuffEffect { damageMultiplier = 1.1f,
-                                                         rangeMultiplier  = 1f,
-                                                         fireRateMultiplier = 1f },
-                prerequisiteNodeNames = new string[0]
-            },
-            new SkillNode
-            {
-                nodeName              = "Study Group",
-                description           = "+1 bonus life",
-                cost                  = 1,
-                section               = SkillSection.Social,
-                buff                  = new BuffEffect { bonusLives = 1 },
-                prerequisiteNodeNames = new string[] { "Tutoring" }
-            },
-            new SkillNode
-            {
-                nodeName              = "Part-time Cashier",
-                description           = "+20 starting gold",
-                cost                  = 1,
-                section               = SkillSection.PartTimeWork,
-                buff                  = new BuffEffect { bonusStartGold = 20 },
-                prerequisiteNodeNames = new string[0]
-            },
-            new SkillNode
-            {
-                nodeName              = "Cup of Coffee",
-                description           = "+20 gold at the start of every round.",
-                cost                  = 1,
-                section               = SkillSection.PartTimeWork,
-                buff                  = new BuffEffect { bonusGoldPerRound = 20 },
-                prerequisiteNodeNames = new string[0]
-            }
-        };
-
-        SkillTreeManager stm = go.AddComponent<SkillTreeManager>();
-        stm.skillTreeData = st;
-
         go.AddComponent<CreditManager>();
-        go.AddComponent<SkillPointManager>();
 
         gm.allFaculties = new FacultyData[0]; // filled later
     }

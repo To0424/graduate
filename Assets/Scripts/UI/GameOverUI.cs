@@ -11,7 +11,6 @@ public class GameOverUI : MonoBehaviour
 
     [Header("Level Won")]
     public TextMeshProUGUI creditsEarnedText;
-    public TextMeshProUGUI skillPointsEarnedText;
     public Button continueButton;
 
     [Header("Level Lost")]
@@ -70,8 +69,6 @@ public class GameOverUI : MonoBehaviour
         {
             if (creditsEarnedText != null)
                 creditsEarnedText.text = $"+{level.creditsReward} Credits";
-            if (skillPointsEarnedText != null)
-                skillPointsEarnedText.text = $"+{level.skillPointsReward} Skill Points";
         }
     }
 

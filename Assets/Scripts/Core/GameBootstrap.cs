@@ -9,7 +9,6 @@ public class GameBootstrap : MonoBehaviour
 {
     [Header("Only needed in the FIRST scene that loads, or for editor testing")]
     public FacultyData[] allFaculties;
-    public SkillTreeData skillTreeData;
 
     void Awake()
     {
@@ -26,12 +25,5 @@ public class GameBootstrap : MonoBehaviour
 
         // CreditManager
         go.AddComponent<CreditManager>();
-
-        // SkillPointManager
-        go.AddComponent<SkillPointManager>();
-
-        // SkillTreeManager
-        SkillTreeManager stm = go.AddComponent<SkillTreeManager>();
-        stm.skillTreeData = skillTreeData;
     }
 }

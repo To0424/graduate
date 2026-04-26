@@ -35,12 +35,12 @@ public class Tower : MonoBehaviour
         data = towerData;
         slot = towerSlot;
 
-        // Apply base stats (skill tree buffs applied on top)
+        // Apply base stats (run buffs applied on top)
         currentRange = data.range;
         currentFireRate = data.fireRate;
         currentDamage = data.damage;
 
-        ApplySkillTreeBuffs();
+        ApplyRunBuffs();
 
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
         if (sr != null)
@@ -131,7 +131,7 @@ public class Tower : MonoBehaviour
         currentRange    = newData.range;
         currentFireRate = newData.fireRate;
         currentDamage   = newData.damage;
-        ApplySkillTreeBuffs();
+        ApplyRunBuffs();
 
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
         if (sr != null)
@@ -173,22 +173,21 @@ public class Tower : MonoBehaviour
         }
     }
 
-    void ApplySkillTreeBuffs()
+    void ApplyRunBuffs()
     {
         BuffEffect total = new BuffEffect();
-        if (SkillTreeManager.Instance != null) total.AddBuff(SkillTreeManager.Instance.GetTotalBuffs());
         if (RunBuffs.Instance != null)        total.AddBuff(RunBuffs.Instance.stats);
         currentDamage   = Mathf.RoundToInt(data.damage * total.damageMultiplier);
         currentRange    = data.range    * total.rangeMultiplier;
         currentFireRate = data.fireRate * total.fireRateMultiplier;
     }
 
-    /// <summary>Re-apply skill-tree + run-buff stats to every tower currently
+    /// <summary>Re-apply run-buff stats to every tower currently
     /// placed. Called by RunBuffs.Apply when a marathon buff is picked.</summary>
     public static void RefreshAllStats()
     {
         Tower[] all = FindObjectsByType<Tower>(FindObjectsSortMode.None);
-        foreach (Tower t in all) if (t != null) t.ApplySkillTreeBuffs();
+        foreach (Tower t in all) if (t != null) t.ApplyRunBuffs();
     }
 
     void Update()
