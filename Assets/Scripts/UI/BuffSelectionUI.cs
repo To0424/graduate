@@ -46,48 +46,25 @@ public class BuffSelectionUI : MonoBehaviour
         rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
         rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
 
-        // Dim background
+        // Light dim only, so the picker feels in-world instead of a full page.
         var bg = root.AddComponent<Image>();
-        bg.color = new Color(0.03f, 0.05f, 0.09f, 1f);
+        bg.sprite = RuntimeSprite.WhiteSquare;
+        bg.type = Image.Type.Sliced;
+        bg.color = new Color(0.03f, 0.05f, 0.09f, 0.60f);
         bg.raycastTarget = true;
 
-        // Main stage panel
-        var stage = new GameObject("Stage");
-        stage.transform.SetParent(root.transform, false);
-        var srt = stage.AddComponent<RectTransform>();
-        srt.anchorMin = new Vector2(0.05f, 0.10f);
-        srt.anchorMax = new Vector2(0.95f, 0.92f);
-        srt.offsetMin = Vector2.zero;
-        srt.offsetMax = Vector2.zero;
-        var stageImg = stage.AddComponent<Image>();
-        stageImg.color = new Color(0.06f, 0.08f, 0.14f, 1f);
-
-        var hdr = new GameObject("HeaderBar");
-        hdr.transform.SetParent(stage.transform, false);
-        var hrt = hdr.AddComponent<RectTransform>();
-        hrt.anchorMin = new Vector2(0f, 0.84f);
-        hrt.anchorMax = new Vector2(1f, 1f);
-        hrt.offsetMin = Vector2.zero;
-        hrt.offsetMax = Vector2.zero;
-        var hdrImg = hdr.AddComponent<Image>();
-        hdrImg.color = new Color(0.15f, 0.22f, 0.34f, 1f);
-
-        // Title
-        MakeText(stage.transform, "Choose a Buff", new Vector2(0.5f, 0.93f), 58, FontStyle.Bold,
-                 new Color(1f, 0.95f, 0.7f));
-
-        var subtitle = $"Wave {MarathonMode.CurrentWave} of {MarathonMode.TOTAL_WAVES}   ·   Pity {MarathonMode.PityCounter}/{MarathonMode.HERO_PITY_LIMIT}";
-        MakeText(stage.transform, subtitle, new Vector2(0.5f, 0.82f), 27, FontStyle.Normal,
+        var subtitle = $"Pity {MarathonMode.PityCounter}/{MarathonMode.HERO_PITY_LIMIT}";
+        MakeText(root.transform, subtitle, new Vector2(0.5f, 0.90f), 22, FontStyle.Bold,
                  new Color(0.88f, 0.91f, 0.98f));
 
-        // Cards row
+        // Cards row only (no full page panel).
         int n = offers.Count;
-        float cardW = 350f, cardH = 500f, gap = 32f;
+        float cardW = 320f, cardH = 430f, gap = 26f;
         float totalW = n * cardW + (n - 1) * gap;
         for (int i = 0; i < n; i++)
         {
             float x = -totalW * 0.5f + cardW * 0.5f + i * (cardW + gap);
-            BuildCard(stage.transform, offers[i], new Vector2(x, -38f), cardW, cardH);
+            BuildCard(root.transform, offers[i], new Vector2(x, 0f), cardW, cardH);
         }
     }
 
@@ -101,10 +78,17 @@ public class BuffSelectionUI : MonoBehaviour
         rt.anchoredPosition = anchoredPos;
 
         var img = card.AddComponent<Image>();
-        img.color = new Color(0.11f, 0.14f, 0.22f, 1f);
+        img.sprite = RuntimeSprite.WhiteSquare;
+        img.type = Image.Type.Sliced;
+        img.color = new Color(0.10f, 0.13f, 0.22f, 1f);
         var cardOutline = card.AddComponent<Outline>();
         cardOutline.effectColor = new Color(0f, 0f, 0f, 0.92f);
         cardOutline.effectDistance = new Vector2(2f, -2f);
+
+        var cardButton = card.AddComponent<Button>();
+        cardButton.targetGraphic = img;
+        BuffOffer captured = offer;
+        cardButton.onClick.AddListener(() => OnPick(captured));
 
         // Top accent strip = rarity
         var stripGO = new GameObject("Strip");
@@ -114,6 +98,8 @@ public class BuffSelectionUI : MonoBehaviour
         srt.pivot = new Vector2(0.5f, 1f);
         srt.sizeDelta = new Vector2(0f, 18f); srt.anchoredPosition = Vector2.zero;
         var strip = stripGO.AddComponent<Image>();
+        strip.sprite = RuntimeSprite.WhiteSquare;
+        strip.type = Image.Type.Sliced;
         strip.color = offer.RarityColor();
 
         // Rarity label
@@ -121,27 +107,13 @@ public class BuffSelectionUI : MonoBehaviour
                       22, FontStyle.Bold, offer.RarityColor());
         // Title
         MakeLocalText(card.transform, offer.title, new Vector2(0.5f, 0.76f),
-                      34, FontStyle.Bold, Color.white, w - 34f, 80f);
+                      32, FontStyle.Bold, Color.white, w - 34f, 80f);
         // Description
         MakeLocalText(card.transform, offer.description, new Vector2(0.5f, 0.53f),
                       22, FontStyle.Normal, new Color(0.90f, 0.92f, 0.98f), w - 46f, 220f);
 
-        // Pick button
-        var btnGO = new GameObject("Pick");
-        btnGO.transform.SetParent(card.transform, false);
-        var brt = btnGO.AddComponent<RectTransform>();
-        brt.anchorMin = brt.anchorMax = new Vector2(0.5f, 0f);
-        brt.pivot = new Vector2(0.5f, 0f);
-        brt.sizeDelta = new Vector2(w - 48f, 70f);
-        brt.anchoredPosition = new Vector2(0f, 30f);
-        var bimg = btnGO.AddComponent<Image>();
-        bimg.color = new Color(offer.RarityColor().r * 0.9f, offer.RarityColor().g * 0.9f,
-                               offer.RarityColor().b * 0.9f, 1f);
-        var btn = btnGO.AddComponent<Button>();
-        btn.targetGraphic = bimg;
-        BuffOffer captured = offer;
-        btn.onClick.AddListener(() => OnPick(captured));
-        MakeLocalText(btnGO.transform, "PICK", new Vector2(0.5f, 0.5f), 30, FontStyle.Bold, Color.white);
+        MakeLocalText(card.transform, "Click card to pick", new Vector2(0.5f, 0.10f),
+                      20, FontStyle.Bold, new Color(0.98f, 0.98f, 1f), w - 34f, 44f);
     }
 
     void OnPick(BuffOffer offer)
