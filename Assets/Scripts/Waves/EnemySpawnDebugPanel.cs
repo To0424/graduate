@@ -252,6 +252,18 @@ public class EnemySpawnDebugPanel : MonoBehaviour
             }
         }
 
+        // Marathon hero pool (so faculty profs gated behind buff drops are
+        // still grantable for testing).
+        if (MarathonMode.IsActive && MarathonMode.BuffPool != null)
+        {
+            foreach (var off in MarathonMode.BuffPool)
+            {
+                if (off == null || off.kind != BuffOfferKind.UnlockHero) continue;
+                if (off.towerToUnlock == null) continue;
+                if (seen.Add(off.towerToUnlock)) list.Add(off.towerToUnlock);
+            }
+        }
+
         return list;
     }
 

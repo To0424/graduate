@@ -965,6 +965,34 @@ public class QuickTestBootstrap : MonoBehaviour
             rarity = BuffRarity.Hero, kind = BuffOfferKind.UnlockHero, towerToUnlock = heroes[1]
         });
 
+        // Faculty professors (TW Chim / Hayden So / Greg Wu / Wilton).
+        // These are the fleshed-out hero roster — each comes with two
+        // upgrade paths.
+        TowerData[] faculty = MakeFacultyProfessors(projPrefab);
+        if (faculty != null && faculty.Length >= 4)
+        {
+            list.Add(new BuffOffer {
+                title = "Hire: TW Chim",
+                description = "Unlocks TW Chim \u2014 King Crimson skips a round (once per game). On-hit stops enemies for 0.3s.",
+                rarity = BuffRarity.Hero, kind = BuffOfferKind.UnlockHero, towerToUnlock = faculty[0]
+            });
+            list.Add(new BuffOffer {
+                title = "Hire: Hayden So",
+                description = "Unlocks Hayden So \u2014 Mucodec yanks every enemy in radius toward its center.",
+                rarity = BuffRarity.Hero, kind = BuffOfferKind.UnlockHero, towerToUnlock = faculty[1]
+            });
+            list.Add(new BuffOffer {
+                title = "Hire: Greg Wu",
+                description = "Unlocks Greg Wu \u2014 'Uh huh' empowers every nearby tower's damage for 8s.",
+                rarity = BuffRarity.Hero, kind = BuffOfferKind.UnlockHero, towerToUnlock = faculty[2]
+            });
+            list.Add(new BuffOffer {
+                title = "Hire: Wilton",
+                description = "Unlocks Wilton \u2014 MEGA boosts surrounding towers' fire rate. Passive +25% gold while alive.",
+                rarity = BuffRarity.Hero, kind = BuffOfferKind.UnlockHero, towerToUnlock = faculty[3]
+            });
+        }
+
         return list;
     }
 
