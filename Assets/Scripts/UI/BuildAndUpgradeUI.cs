@@ -1,7 +1,9 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 /// <summary>
 /// In-game build & upgrade interface. One MonoBehaviour creates and manages:
@@ -23,6 +25,7 @@ public class BuildAndUpgradeUI : MonoBehaviour
     private Canvas _canvas;
     private GameObject _radialRoot;
     private GameObject _upgradeRoot;
+    private GameObject _tooltipRoot;
     private TowerSlot _activeSlot;
     private Tower _activeTower;
     private bool _menuOpen;
@@ -34,6 +37,14 @@ public class BuildAndUpgradeUI : MonoBehaviour
     private TextMeshProUGUI _path1Lbl, _path2Lbl;
     private Button   _cap1Btn,    _cap2Btn;
     private TextMeshProUGUI _cap1Lbl, _cap2Lbl;
+    private TextMeshProUGUI _tooltipTitle;
+    private TextMeshProUGUI _tooltipBody;
+    private readonly List<TowerData> _radialOptions = new List<TowerData>();
+    private readonly List<Image> _radialSectorImages = new List<Image>();
+
+    private const float PaletteDiameter = 310f;
+    private const float PaletteRadius = PaletteDiameter * 0.5f;
+    private const float PaletteCancelRadius = 44f;
 
     public void Build(Canvas canvas, TowerData[] options, Tower prefab)
     {
@@ -42,6 +53,7 @@ public class BuildAndUpgradeUI : MonoBehaviour
         towerPrefab       = prefab;
         _cam              = Camera.main;
         BuildRadialRoot();
+        BuildTooltipRoot();
         BuildUpgradeRoot();
         TowerPlacement.OnTowerPlaced += OnTowerPlaced;
     }
@@ -56,6 +68,11 @@ public class BuildAndUpgradeUI : MonoBehaviour
 
     void Update()
     {
+        if (HandleRadialPaletteInput()) return;
+
+        if (_tooltipRoot != null && _tooltipRoot.activeSelf)
+            MoveTooltip(Input.mousePosition);
+
         // Universal close inputs
         if (_menuOpen && (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape)))
         {
@@ -130,6 +147,8 @@ public class BuildAndUpgradeUI : MonoBehaviour
     {
         for (int i = _radialRoot.transform.childCount - 1; i >= 0; i--)
             Destroy(_radialRoot.transform.GetChild(i).gameObject);
+        _radialOptions.Clear();
+        _radialSectorImages.Clear();
 
         // Filter: regular towers only (no heroes), and skip deployed uniques.
         var visible = new System.Collections.Generic.List<TowerData>();
@@ -167,31 +186,30 @@ public class BuildAndUpgradeUI : MonoBehaviour
             return;
         }
 
-        const float innerRadius = 120f;
-        const float outerRadius = 202f;
-        const int innerCapacity = 6;
-        Vector2 btnSize = new Vector2(126f, 90f);
+        const float iconRadius = 100f;
+        const float iconSize = 58f;
 
-        int innerCount = Mathf.Min(innerCapacity, visible.Count);
-        int outerCount = visible.Count - innerCount;
+        // Slightly transparent large background circle.
+        GameObject backdrop = new GameObject("PaletteBackdrop");
+        backdrop.transform.SetParent(_radialRoot.transform, false);
+        RectTransform backRT = backdrop.AddComponent<RectTransform>();
+        backRT.anchorMin = backRT.anchorMax = new Vector2(0.5f, 0.5f);
+        backRT.anchoredPosition = Vector2.zero;
+        backRT.sizeDelta = new Vector2(PaletteDiameter, PaletteDiameter);
+        Image backImg = backdrop.AddComponent<Image>();
+        backImg.sprite = RuntimeSprite.Circle != null ? RuntimeSprite.Circle : RuntimeSprite.WhiteSquare;
+        backImg.color = new Color(0.08f, 0.12f, 0.18f, 0.55f);
+        backImg.raycastTarget = false;
 
-        for (int i = 0; i < innerCount; i++)
+        int sectorCount = visible.Count;
+        for (int i = 0; i < sectorCount; i++)
         {
-            float angle = innerCount == 1
-                ? -Mathf.PI * 0.5f
-                : (i / (float)innerCount) * Mathf.PI * 2f - Mathf.PI * 0.5f;
-            Vector2 pos = new Vector2(Mathf.Cos(angle) * innerRadius, Mathf.Sin(angle) * innerRadius);
-            AddRadialBuildOption(visible[i], slot, pos, btnSize);
+            _radialOptions.Add(visible[i]);
+            Image sectorImage = AddRadialBuildOption(visible[i], i, sectorCount, iconRadius, iconSize);
+            _radialSectorImages.Add(sectorImage);
         }
 
-        for (int i = 0; i < outerCount; i++)
-        {
-            float angle = outerCount == 1
-                ? -Mathf.PI * 0.5f
-                : (i / (float)outerCount) * Mathf.PI * 2f - Mathf.PI * 0.5f;
-            Vector2 pos = new Vector2(Mathf.Cos(angle) * outerRadius, Mathf.Sin(angle) * outerRadius);
-            AddRadialBuildOption(visible[innerCount + i], slot, pos, btnSize);
-        }
+        SetSectorHighlight(-1);
 
         // Center cancel button
         GameObject cancel = MakeButton(_radialRoot.transform, "Cancel", "X", new Color(0.30f, 0.30f, 0.35f, 1f));
@@ -208,47 +226,153 @@ public class BuildAndUpgradeUI : MonoBehaviour
         cancel.GetComponent<Button>().onClick.AddListener(CloseMenus);
     }
 
-    void AddRadialBuildOption(TowerData td, TowerSlot slot, Vector2 pos, Vector2 size)
+    Image AddRadialBuildOption(TowerData td, int index, int total, float iconRadius, float iconSize)
     {
         bool affordable = CurrencyManager.Instance != null &&
                           CurrencyManager.Instance.CanAfford(td.cost);
 
-        Color baseCol = Tower.GetTowerColor(td.towerType) * 0.72f;
-        baseCol.a = 1f;
-        if (!affordable) baseCol = Color.Lerp(baseCol, Color.gray, 0.62f);
+        Color baseCol = Tower.GetTowerColor(td.towerType) * 0.8f;
+        baseCol.a = affordable ? 0.36f : 0.24f;
 
-        GameObject btn = MakeButton(_radialRoot.transform, $"R_{td.towerName}",
-                                    $"{td.towerName}\n{td.cost}g", baseCol);
-        RectTransform brt = btn.GetComponent<RectTransform>();
+        GameObject btn = new GameObject($"R_{td.towerName}_{index}");
+        btn.transform.SetParent(_radialRoot.transform, false);
+        RectTransform brt = btn.AddComponent<RectTransform>();
         brt.anchorMin = brt.anchorMax = new Vector2(0.5f, 0.5f);
-        brt.anchoredPosition = pos;
-        brt.sizeDelta = size;
+        brt.anchoredPosition = Vector2.zero;
+        brt.sizeDelta = new Vector2(PaletteDiameter, PaletteDiameter);
+        float wedgeRotation = -360f * index / Mathf.Max(1f, total);
+        brt.localEulerAngles = new Vector3(0f, 0f, wedgeRotation);
 
-        TextMeshProUGUI lbl = btn.GetComponentInChildren<TextMeshProUGUI>();
-        if (lbl != null)
+        Image bg = btn.AddComponent<Image>();
+        bg.sprite = RuntimeSprite.Circle != null ? RuntimeSprite.Circle : RuntimeSprite.WhiteSquare;
+        bg.type = Image.Type.Filled;
+        bg.fillMethod = Image.FillMethod.Radial360;
+        bg.fillAmount = 1f / Mathf.Max(1, total);
+        bg.fillOrigin = (int)Image.Origin360.Top;
+        bg.color = baseCol;
+        bg.raycastTarget = false;
+
+        // Place icon at the center of the local wedge; parent rotation moves it to the proper sector.
+        float sectorAngle = (Mathf.PI * 2f) / Mathf.Max(1f, total);
+        float localCenter = sectorAngle * 0.5f; // clockwise from top
+        Vector2 iconPos = new Vector2(Mathf.Sin(localCenter) * iconRadius, Mathf.Cos(localCenter) * iconRadius);
+
+        // Icon inside each equal sector.
+        GameObject iconObj = new GameObject("Icon");
+        iconObj.transform.SetParent(btn.transform, false);
+        RectTransform iconRT = iconObj.AddComponent<RectTransform>();
+        iconRT.anchorMin = iconRT.anchorMax = new Vector2(0.5f, 0.5f);
+        iconRT.anchoredPosition = iconPos;
+        iconRT.sizeDelta = new Vector2(iconSize, iconSize);
+        iconRT.localEulerAngles = new Vector3(0f, 0f, -wedgeRotation);
+        Image icon = iconObj.AddComponent<Image>();
+        icon.sprite = td.sprite != null ? td.sprite : RuntimeSprite.WhiteSquare;
+        icon.preserveAspect = true;
+        icon.color = affordable ? Color.white : new Color(0.55f, 0.55f, 0.55f, 0.95f);
+        icon.raycastTarget = false;
+
+        // Small cost text under icon.
+        GameObject costObj = MakeText(btn.transform, "Cost", $"{td.cost}g", 13, new Color(0.96f, 0.98f, 1f, affordable ? 1f : 0.75f));
+        RectTransform costRT = costObj.GetComponent<RectTransform>();
+        costRT.anchorMin = costRT.anchorMax = new Vector2(0.5f, 0.5f);
+        costRT.anchoredPosition = iconPos + new Vector2(0f, -36f);
+        costRT.sizeDelta = new Vector2(70f, 22f);
+        costRT.localEulerAngles = new Vector3(0f, 0f, -wedgeRotation);
+        TextMeshProUGUI costTmp = costObj.GetComponent<TextMeshProUGUI>();
+        if (costTmp != null)
         {
-            lbl.fontSize = 18;
-            lbl.enableAutoSizing = true;
-            lbl.fontSizeMax = 18;
-            lbl.fontSizeMin = 11;
-            lbl.fontStyle = FontStyles.Bold;
-            lbl.enableWordWrapping = true;
-            lbl.overflowMode = TextOverflowModes.Ellipsis;
-            lbl.lineSpacing = 2f;
-            lbl.margin = new Vector4(6f, 4f, 6f, 4f);
+            costTmp.fontStyle = FontStyles.Bold;
+            costTmp.alignment = TextAlignmentOptions.Center;
         }
+        GameObject costBg = new GameObject("CostBG");
+        costBg.transform.SetParent(costObj.transform, false);
+        costBg.transform.SetSiblingIndex(0);
+        RectTransform costBgRT = costBg.AddComponent<RectTransform>();
+        costBgRT.anchorMin = Vector2.zero;
+        costBgRT.anchorMax = Vector2.one;
+        costBgRT.offsetMin = Vector2.zero;
+        costBgRT.offsetMax = Vector2.zero;
+        Image costBgImg = costBg.AddComponent<Image>();
+        costBgImg.color = new Color(0f, 0f, 0f, 0.35f);
+        costBgImg.raycastTarget = false;
 
-        TowerData captured = td;
-        TowerSlot capSlot = slot;
-        btn.GetComponent<Button>().onClick.AddListener(() =>
+        Debug.Log($"Tower icon test: {td.towerName} sprite={(td.sprite != null ? td.sprite.name : "NULL")}");
+
+        return bg;
+    }
+
+    bool HandleRadialPaletteInput()
+    {
+        if (_radialRoot == null || !_radialRoot.activeSelf) return false;
+        if (_activeSlot == null || _radialOptions.Count == 0) return false;
+
+        RectTransform radialRT = _radialRoot.GetComponent<RectTransform>();
+        if (radialRT == null) return false;
+
+        Camera eventCam = _canvas != null && _canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _cam;
+        Vector2 local;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(radialRT, Input.mousePosition, eventCam, out local))
+            return false;
+
+        float dist = local.magnitude;
+        int hovered = -1;
+        if (dist >= PaletteCancelRadius && dist <= PaletteRadius)
+            hovered = GetSectorIndex(local, _radialOptions.Count);
+
+        SetSectorHighlight(hovered);
+
+        if (hovered >= 0 && hovered < _radialOptions.Count)
+            ShowTooltip(_radialOptions[hovered], Input.mousePosition);
+        else
+            HideTooltip();
+
+        if (!Input.GetMouseButtonDown(0)) return false;
+
+        if (hovered >= 0 && hovered < _radialOptions.Count)
         {
+            TowerData chosen = _radialOptions[hovered];
             if (TowerPlacement.Instance != null)
             {
                 TowerPlacement.Instance.SetTowerPrefab(towerPrefab);
-                TowerPlacement.Instance.PlaceAtSlot(captured, capSlot);
+                TowerPlacement.Instance.PlaceAtSlot(chosen, _activeSlot);
             }
             CloseMenus();
-        });
+            return true;
+        }
+
+        if (dist <= PaletteCancelRadius || dist > PaletteRadius)
+        {
+            CloseMenus();
+            return true;
+        }
+
+        return true;
+    }
+
+    int GetSectorIndex(Vector2 localPoint, int sectorCount)
+    {
+        if (sectorCount <= 0) return -1;
+        // Angle measured clockwise from top to match wedge construction.
+        float angle = Mathf.Atan2(localPoint.x, localPoint.y);
+        if (angle < 0f) angle += Mathf.PI * 2f;
+        int idx = Mathf.FloorToInt((angle / (Mathf.PI * 2f)) * sectorCount);
+        return Mathf.Clamp(idx, 0, sectorCount - 1);
+    }
+
+    void SetSectorHighlight(int hovered)
+    {
+        int n = Mathf.Min(_radialOptions.Count, _radialSectorImages.Count);
+        for (int i = 0; i < n; i++)
+        {
+            Image sector = _radialSectorImages[i];
+            if (sector == null) continue;
+
+            bool affordable = CurrencyManager.Instance != null && CurrencyManager.Instance.CanAfford(_radialOptions[i].cost);
+            Color c = Tower.GetTowerColor(_radialOptions[i].towerType) * 0.8f;
+            if (i == hovered) c.a = affordable ? 0.62f : 0.46f;
+            else c.a = affordable ? 0.36f : 0.24f;
+            sector.color = c;
+        }
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -444,6 +568,7 @@ public class BuildAndUpgradeUI : MonoBehaviour
     void HideRadial()
     {
         if (_radialRoot != null) _radialRoot.SetActive(false);
+        HideTooltip();
     }
 
     void HideUpgradePanel()
@@ -455,6 +580,9 @@ public class BuildAndUpgradeUI : MonoBehaviour
     {
         HideRadial();
         HideUpgradePanel();
+        HideTooltip();
+        _radialOptions.Clear();
+        _radialSectorImages.Clear();
         DestroyRangeRing();
         if (_activeSlot != null) _activeSlot.Highlight(false);
         _activeSlot = null;
@@ -508,6 +636,84 @@ public class BuildAndUpgradeUI : MonoBehaviour
         else      InteractionTimeScale.End();
     }
 
+    void BuildTooltipRoot()
+    {
+        _tooltipRoot = MakePanel(_canvas.transform, "BuildOptionTooltip", new Color(0.06f, 0.08f, 0.13f, 0.96f));
+        RectTransform ttRT = _tooltipRoot.GetComponent<RectTransform>();
+        ttRT.pivot = new Vector2(0f, 1f);
+        ttRT.sizeDelta = new Vector2(300f, 140f);
+        _tooltipRoot.SetActive(false);
+
+        GameObject titleObj = MakeText(_tooltipRoot.transform, "Title", "", 18, Color.white);
+        RectTransform titleRT = titleObj.GetComponent<RectTransform>();
+        titleRT.anchorMin = new Vector2(0f, 1f);
+        titleRT.anchorMax = new Vector2(1f, 1f);
+        titleRT.pivot = new Vector2(0.5f, 1f);
+        titleRT.anchoredPosition = new Vector2(0f, -10f);
+        titleRT.sizeDelta = new Vector2(-18f, 30f);
+        _tooltipTitle = titleObj.GetComponent<TextMeshProUGUI>();
+        _tooltipTitle.alignment = TextAlignmentOptions.TopLeft;
+        _tooltipTitle.fontStyle = FontStyles.Bold;
+
+        GameObject bodyObj = MakeText(_tooltipRoot.transform, "Body", "", 14, new Color(0.86f, 0.90f, 0.98f));
+        RectTransform bodyRT = bodyObj.GetComponent<RectTransform>();
+        bodyRT.anchorMin = new Vector2(0f, 0f);
+        bodyRT.anchorMax = new Vector2(1f, 1f);
+        bodyRT.offsetMin = new Vector2(10f, 10f);
+        bodyRT.offsetMax = new Vector2(-10f, -42f);
+        _tooltipBody = bodyObj.GetComponent<TextMeshProUGUI>();
+        _tooltipBody.alignment = TextAlignmentOptions.TopLeft;
+        _tooltipBody.enableWordWrapping = true;
+        _tooltipBody.overflowMode = TextOverflowModes.Overflow;
+    }
+
+    void ShowTooltip(TowerData td, Vector2 screenPos)
+    {
+        if (_tooltipRoot == null || td == null) return;
+
+        _tooltipTitle.text = $"{td.towerName}  ({td.cost}g)";
+        _tooltipBody.text =
+            $"Damage: {td.damage}\n" +
+            $"Range: {td.range:F1}\n" +
+            $"Rate: {td.fireRate:F2}/s\n" +
+            $"Type: {td.towerType}";
+
+        MoveTooltip(screenPos);
+        _tooltipRoot.SetActive(true);
+    }
+
+    void MoveTooltip(Vector2 screenPos)
+    {
+        if (_tooltipRoot == null || !_tooltipRoot.activeSelf) return;
+        if (_canvas == null) return;
+
+        RectTransform canvasRT = _canvas.transform as RectTransform;
+        RectTransform ttRT = _tooltipRoot.GetComponent<RectTransform>();
+        if (canvasRT == null || ttRT == null) return;
+
+        Camera eventCam = _canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _cam;
+        Vector2 localPos;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRT, screenPos, eventCam, out localPos)) return;
+
+        Vector2 anchored = localPos + new Vector2(20f, -18f);
+        Vector2 half = canvasRT.rect.size * 0.5f;
+        Vector2 size = ttRT.sizeDelta;
+
+        float minX = -half.x;
+        float maxX = half.x - size.x;
+        float maxY = half.y;
+        float minY = -half.y + size.y;
+        anchored.x = Mathf.Clamp(anchored.x, minX, maxX);
+        anchored.y = Mathf.Clamp(anchored.y, minY, maxY);
+
+        ttRT.anchoredPosition = anchored;
+    }
+
+    void HideTooltip()
+    {
+        if (_tooltipRoot != null) _tooltipRoot.SetActive(false);
+    }
+
     // ── UI helpers ────────────────────────────────────────────────────────────
     static GameObject MakePanel(Transform parent, string name, Color c)
     {
@@ -548,5 +754,13 @@ public class BuildAndUpgradeUI : MonoBehaviour
         lrt.offsetMin = lrt.offsetMax = Vector2.zero;
         lbl.GetComponent<TextMeshProUGUI>().alignment = TextAlignmentOptions.Center;
         return obj;
+    }
+
+    static void AddEventTrigger(EventTrigger trigger, EventTriggerType type, UnityAction<BaseEventData> callback)
+    {
+        if (trigger == null || callback == null) return;
+        EventTrigger.Entry entry = new EventTrigger.Entry { eventID = type };
+        entry.callback.AddListener(callback);
+        trigger.triggers.Add(entry);
     }
 }
