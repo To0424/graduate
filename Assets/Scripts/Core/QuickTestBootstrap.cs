@@ -300,10 +300,12 @@ public class QuickTestBootstrap : MonoBehaviour
         tank.enemyName   = "Tank Bug";
         tank.moveSpeed   = 1.2f;
         tank.maxHealth   = 250;
-        tank.artFacesRight = true;
         tank.goldReward  = 25;
         tank.courseTier  = 2;
         tank.archetype   = EnemyArchetype.Standard;
+        tank.animatorController = Resources.Load<RuntimeAnimatorController>("Animators/dorodino");
+        tank.artFacesRight      = false;   // or false, depending on the art
+        tank.visualScale        = 1f;   // optional size tweak
 
         EnemyData shielded = ScriptableObject.CreateInstance<EnemyData>();
         shielded.enemyName   = "Shielded Bug";
