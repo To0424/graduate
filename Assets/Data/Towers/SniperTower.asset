@@ -18,7 +18,8 @@ MonoBehaviour:
   range: 5
   fireRate: 0.5
   damage: 80
-  sprite: {fileID: 21300000, guid: cffeb9061ab6a274ab625ee62c66bab0, type: 3}
+  sprite: {fileID: 0}
+  buildMenuIcon: {fileID: 0}
   projectilePrefab: {fileID: 6494951758032652225, guid: 70bc960740b99bb4cadc1be31db12052, type: 3}
   isProfessorTower: 0
   requiredFaculty: 
@@ -29,6 +30,7 @@ MonoBehaviour:
   splashDamageFraction: 0.6
   slowOnHitMultiplier: 1
   slowOnHitDuration: 0
+  goldGainAura: 0
   arcHeight: 0
   projectileSpriteOverride: {fileID: 0}
   heroSkill: {fileID: 0}
@@ -54,6 +56,10 @@ MonoBehaviour:
     splashFractionMultiplier: 1
     slowMultiplierScale: 1
     bonusSlowDuration: 0
+    upgradeSkillCooldownMultiplier: 1
+    upgradeSkillEffectMultiplier: 1
+    upgradeSkillRadiusBonus: 0
+    upgradeSkillDurationBonus: 0
   capstonePath2:
     upgradeName: Upgrade
     description: 
@@ -69,3 +75,7 @@ MonoBehaviour:
     splashFractionMultiplier: 1
     slowMultiplierScale: 1
     bonusSlowDuration: 0
+    upgradeSkillCooldownMultiplier: 1
+    upgradeSkillEffectMultiplier: 1
+    upgradeSkillRadiusBonus: 0
+    upgradeSkillDurationBonus: 0
