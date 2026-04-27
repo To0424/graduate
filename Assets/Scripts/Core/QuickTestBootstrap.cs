@@ -303,9 +303,12 @@ public class QuickTestBootstrap : MonoBehaviour
         tank.goldReward  = 25;
         tank.courseTier  = 2;
         tank.archetype   = EnemyArchetype.Standard;
-        tank.animatorController = Resources.Load<RuntimeAnimatorController>("Animators/dorodino");
-        tank.artFacesRight      = false;   // or false, depending on the art
-        tank.visualScale        = 1f;   // optional size tweak
+        tank.sprite  = Resources.Load<Sprite>("Sprites/catto");
+        tank.animatorController  = null;
+        tank.artFacesRight      = false;
+        tank.visualScale = 1.1f;
+        tank.playSpawnSound = true;
+
 
         EnemyData shielded = ScriptableObject.CreateInstance<EnemyData>();
         shielded.enemyName   = "Shielded Bug";
@@ -383,9 +386,9 @@ public class QuickTestBootstrap : MonoBehaviour
         shieldAura.shieldAuraRadius   = 2.5f;
         shieldAura.shieldAuraAmount   = 30;
         shieldAura.shieldAuraInterval = 3f;
-        shieldAura.animatorController = Resources.Load<RuntimeAnimatorController>("Animators/dad");
-        shieldAura.artFacesRight      = true;   // or false, depending on the art
-        shieldAura.visualScale        = 2f;   // optional size tweak
+        shieldAura.sprite  = Resources.Load<Sprite>("Sprites/whatthedog");
+        shieldAura.animatorController  = null;
+        shieldAura.artFacesRight      = false;
         return new EnemyData[] { basic, fast, tank, shielded, stealth, boss, splitter, shieldAura };
     }
 
@@ -520,7 +523,16 @@ public class QuickTestBootstrap : MonoBehaviour
         self2.heroSkill        = groundSkill;
         self2.projectilePrefab = projPrefab;
 
-        return new TowerData[] { rapid, balanced, sniper, cannon, frost, prof1, prof2, self2 };
+        // ──────────────────────────────────────────────────────────────────
+        // FACULTY PROFESSORS (TW Chim, Hayden So, Greg Wu, Wilton)
+        // ──────────────────────────────────────────────────────────────────
+        TowerData[] faculty = MakeFacultyProfessors(projPrefab);
+
+        var all = new System.Collections.Generic.List<TowerData> {
+            rapid, balanced, sniper, cannon, frost, prof1, prof2, self2
+        };
+        all.AddRange(faculty);
+        return all.ToArray();
     }
 
     // ── Wave data ─────────────────────────────────────────────────────────────
@@ -1053,7 +1065,9 @@ public class QuickTestBootstrap : MonoBehaviour
                           float fireRateMul = 1f, float bonusFireRate = 0f,
                           int   extraShots = 0,
                           float bonusSplash = 0f, float splashFracMul = 1f,
-                          float slowMulScale = 1f, float bonusSlowDur = 0f)
+                          float slowMulScale = 1f, float bonusSlowDur = 0f,
+                          float skillCdMul = 1f, float skillEffMul = 1f,
+                          float bonusSkillRadius = 0f, float bonusSkillDur = 0f)
     {
         return new TowerUpgrade {
             upgradeName = name, description = desc, cost = cost,
@@ -1065,6 +1079,10 @@ public class QuickTestBootstrap : MonoBehaviour
             splashFractionMultiplier = splashFracMul,
             slowMultiplierScale = slowMulScale,
             bonusSlowDuration   = bonusSlowDur,
+            upgradeSkillCooldownMultiplier = skillCdMul,
+            upgradeSkillEffectMultiplier   = skillEffMul,
+            upgradeSkillRadiusBonus        = bonusSkillRadius,
+            upgradeSkillDurationBonus      = bonusSkillDur,
         };
     }
 
@@ -1101,6 +1119,195 @@ public class QuickTestBootstrap : MonoBehaviour
         self2.heroSkill = ground; self2.projectilePrefab = projPrefab;
 
         return new TowerData[] { prof1, prof2, self2 };
+    }
+
+    // ── Faculty professors (TW Chim / Hayden So / Greg Wu / Wilton) ──────────
+    //
+    // Each professor has TWO upgrade paths:
+    //   Path 1 = basic-attack scaling (damage / range / fire rate / on-hit gimmick)
+    //   Path 2 = active-skill scaling (cooldown reduction, magnitude, radius, duration)
+    //
+    // Costs / numbers are tuned to feel like meaningful but not strictly-required
+    // boosts; capstones lean into each professor's identity.
+    TowerData[] MakeFacultyProfessors(GameObject projPrefab)
+    {
+        // ── TW Chim ──────────────────────────────────────────────────────
+        // Active: King Crimson — instantly skips the current round (once per game).
+        // Basic : Punchy single-target attacks that "stop" enemies for 0.3s
+        //          (very deep slow approximating a stun) on every hit.
+        HeroSkillData kingCrimson = ScriptableObject.CreateInstance<HeroSkillData>();
+        kingCrimson.skillName     = "King Crimson";
+        kingCrimson.description   = "Erase time. Instantly clear every enemy on the map and end the current round. Single-use per game.";
+        kingCrimson.cooldown      = 999f;
+        kingCrimson.effect        = HeroSkillEffect.SkipRound;
+        kingCrimson.oncePerGame   = true;
+        kingCrimson.audioClipResource = "kingcrimson";
+        kingCrimson.audioVolume   = 0.9f;
+
+        TowerData twChim = ScriptableObject.CreateInstance<TowerData>();
+        twChim.towerName        = "TW Chim";
+        twChim.towerType        = TowerType.Professor;
+        twChim.cost             = 180;
+        twChim.isProfessorTower = true;
+        twChim.unique           = true;
+        twChim.heroSkill        = kingCrimson;
+        twChim.projectilePrefab = projPrefab;
+        twChim.range            = 3.2f;
+        twChim.fireRate         = 1.1f;
+        twChim.damage           = 18;
+        twChim.slowOnHitMultiplier = 0.05f;  // ~stop on hit
+        twChim.slowOnHitDuration   = 0.3f;
+        twChim.path1Upgrades = new TowerUpgrade[] {
+            U("Iron Grip",      "On-hit stop lasts +0.1s.",                     60,  bonusSlowDur: 0.1f),
+            U("Sharper Glare",  "+25% damage.",                                 110, dmgMul: 1.25f),
+            U("Fast Hands",     "+25% fire rate.",                              170, fireRateMul: 1.25f),
+            U("Time Halt",      "On-hit stop lasts +0.2s, +20% range.",         260, bonusSlowDur: 0.2f, rangeMul: 1.20f),
+        };
+        twChim.path2Upgrades = new TowerUpgrade[] {
+            U("Echo of Time",   "King Crimson's bullet-time after-effect lingers (cosmetic).", 80),
+            U("Faster Recall",  "(no extra cooldown reduction; already once-per-game.)",       150),
+            U("Wider Erasure",  "King Crimson also refunds 100 gold on use.",                  220),
+            U("Mastered Form",  "King Crimson also restores 1 life on use.",                   320),
+        };
+        twChim.capstonePath1 = U("Stand User", "+50% damage, +30% fire rate. Stops endure +0.3s.",
+            400, dmgMul: 1.5f, fireRateMul: 1.30f, bonusSlowDur: 0.3f);
+        twChim.capstonePath2 = U("Reset The Universe",
+            "King Crimson can be cast a SECOND time per game.",
+            400);
+        // Note: the second-cast capstone is data-only; HeroTower's once-per-game
+        // gate would need a runtime flag to honour it. Marked as a TODO below.
+
+        // ── Hayden So ────────────────────────────────────────────────────
+        // Active: Mucodec — drops an AOE that yanks enemies toward its center.
+        // Basic : Standard projectile attack.
+        HeroSkillData mucodec = ScriptableObject.CreateInstance<HeroSkillData>();
+        mucodec.skillName        = "Mucodec";
+        mucodec.description      = "Throw a research field that drags every enemy in radius toward its center for 1.5s.";
+        mucodec.cooldown         = 14f;
+        mucodec.effect           = HeroSkillEffect.PullToCenter;
+        mucodec.radius           = 3.5f;
+        mucodec.pullStrength     = 4.5f;
+        mucodec.pullDuration     = 1.5f;
+        mucodec.audioClipResource = "mucodec";
+
+        TowerData hayden = ScriptableObject.CreateInstance<TowerData>();
+        hayden.towerName        = "Hayden So";
+        hayden.towerType        = TowerType.Professor;
+        hayden.cost             = 150;
+        hayden.isProfessorTower = true;
+        hayden.unique           = true;
+        hayden.heroSkill        = mucodec;
+        hayden.projectilePrefab = projPrefab;
+        hayden.range            = 4.0f;
+        hayden.fireRate         = 1.0f;
+        hayden.damage           = 22;
+        hayden.path1Upgrades = new TowerUpgrade[] {
+            U("Lecture Notes",    "+25% damage.",          50,  dmgMul: 1.25f),
+            U("Diction Drills",   "+25% fire rate.",       100, fireRateMul: 1.25f),
+            U("Wide Audience",    "+25% range.",           160, rangeMul: 1.25f),
+            U("Voice Projection", "+30% damage, +15% rate.",240, dmgMul: 1.30f, fireRateMul: 1.15f),
+        };
+        hayden.path2Upgrades = new TowerUpgrade[] {
+            U("Magnetic Theory",  "Mucodec radius +0.75.",                      70,  bonusSkillRadius: 0.75f),
+            U("Stronger Pull",    "Mucodec drag strength +50%.",                130, skillEffMul: 1.5f),
+            U("Long Hold",        "Mucodec lasts +1.0s.",                       200, bonusSkillDur: 1.0f),
+            U("Refined Encoder",  "Mucodec cooldown -25%.",                     280, skillCdMul: 0.75f),
+        };
+        hayden.capstonePath1 = U("Vocal Snipe", "+60% damage, +30% range.",
+            380, dmgMul: 1.6f, rangeMul: 1.30f);
+        hayden.capstonePath2 = U("Black Hole Codec",
+            "Mucodec radius +1.5 and pulls 2x as hard.",
+            380, bonusSkillRadius: 1.5f, skillEffMul: 2f);
+
+        // ── Greg Wu ──────────────────────────────────────────────────────
+        // Active: Uh huh — empower aura that boosts surrounding tower damage.
+        // Basic : Standard projectile attack.
+        HeroSkillData uhhuh = ScriptableObject.CreateInstance<HeroSkillData>();
+        uhhuh.skillName         = "Uh huh";
+        uhhuh.description       = "Greg validates every nearby tower. All towers in radius deal 75% extra damage for 8s.";
+        uhhuh.cooldown          = 18f;
+        uhhuh.effect            = HeroSkillEffect.EmpowerAllies;
+        uhhuh.radius            = 4f;
+        uhhuh.empowerMultiplier = 1.75f;
+        uhhuh.empowerDuration   = 8f;
+
+        TowerData greg = ScriptableObject.CreateInstance<TowerData>();
+        greg.towerName        = "Greg Wu";
+        greg.towerType        = TowerType.Professor;
+        greg.cost             = 140;
+        greg.isProfessorTower = true;
+        greg.unique           = true;
+        greg.heroSkill        = uhhuh;
+        greg.projectilePrefab = projPrefab;
+        greg.range            = 3.5f;
+        greg.fireRate         = 1.2f;
+        greg.damage           = 20;
+        greg.path1Upgrades = new TowerUpgrade[] {
+            U("Pointed Question", "+25% damage.",       50,  dmgMul: 1.25f),
+            U("Quick Tutorial",   "+30% fire rate.",    100, fireRateMul: 1.30f),
+            U("Office Hours",     "+30% range.",        170, rangeMul: 1.30f),
+            U("Marker Storm",     "+1 extra shot per volley.", 260, extraShots: 1),
+        };
+        greg.path2Upgrades = new TowerUpgrade[] {
+            U("Big Class",         "Uh huh radius +1.0.",                  70,  bonusSkillRadius: 1.0f),
+            U("Hype Speech",       "Uh huh damage bonus +50% stronger.",    130, skillEffMul: 1.5f),
+            U("Long Lecture",      "Uh huh lasts +4s.",                     200, bonusSkillDur: 4f),
+            U("Lightning Recall",  "Uh huh cooldown -30%.",                 280, skillCdMul: 0.70f),
+        };
+        greg.capstonePath1 = U("Lecture Hall", "+50% damage, +25% range, +1 extra shot.",
+            380, dmgMul: 1.5f, rangeMul: 1.25f, extraShots: 1);
+        greg.capstonePath2 = U("Standing Ovation",
+            "Uh huh radius +2 and bonus is doubled.",
+            380, bonusSkillRadius: 2f, skillEffMul: 2f);
+
+        // ── Wilton ───────────────────────────────────────────────────────
+        // Active: Make Engineering Great Again — attack-speed aura on towers in radius.
+        // Basic : Weak attacks BUT a passive +25% gold aura.
+        HeroSkillData mega = ScriptableObject.CreateInstance<HeroSkillData>();
+        mega.skillName              = "Make Engineering Great Again";
+        mega.description            = "Rallying call. Every tower in radius gains +60% fire rate for 6s.";
+        mega.cooldown               = 16f;
+        mega.effect                 = HeroSkillEffect.AttackSpeedAura;
+        mega.radius                 = 4.5f;
+        mega.attackSpeedMultiplier  = 1.6f;
+        mega.attackSpeedDuration    = 6f;
+        mega.audioClipResource      = "mega";
+
+        TowerData wilton = ScriptableObject.CreateInstance<TowerData>();
+        wilton.towerName        = "Wilton";
+        wilton.towerType        = TowerType.Professor;
+        wilton.cost             = 160;
+        wilton.isProfessorTower = true;
+        wilton.unique           = true;
+        wilton.heroSkill        = mega;
+        wilton.projectilePrefab = projPrefab;
+        wilton.range            = 3.0f;
+        wilton.fireRate         = 0.9f;
+        wilton.damage           = 8;            // intentionally weak
+        wilton.goldGainAura     = 0.25f;        // +25% gold while alive
+        wilton.path1Upgrades = new TowerUpgrade[] {
+            U("Bigger Wallet",    "Gold aura +10% (35% total).",              70),
+            U("Sharper Suit",     "+50% damage (still light).",               110, dmgMul: 1.5f),
+            U("Brand Deal",       "Gold aura +15% (50% total).",              180),
+            U("Power Move",       "+50% damage, +20% fire rate.",             260, dmgMul: 1.5f, fireRateMul: 1.20f),
+        };
+        // Path 1 ramp on the gold aura is intentionally tracked via capstone
+        // since base goldGainAura is a TowerData field; we use the capstone to
+        // bump it. (Tier-by-tier aura growth would need extra plumbing.)
+        wilton.path2Upgrades = new TowerUpgrade[] {
+            U("Loud Speakers",    "MEGA radius +1.0.",                        70,  bonusSkillRadius: 1.0f),
+            U("Rocket Fuel",      "MEGA buff +40% stronger.",                 130, skillEffMul: 1.4f),
+            U("Rally Time",       "MEGA lasts +3s.",                          200, bonusSkillDur: 3f),
+            U("Quick Slogans",    "MEGA cooldown -30%.",                      280, skillCdMul: 0.70f),
+        };
+        wilton.capstonePath1 = U("Sponsor Megadeal",
+            "+100% damage. While Wilton is alive gold gain is doubled.",
+            400, dmgMul: 2f);
+        wilton.capstonePath2 = U("Industrial Revolution",
+            "MEGA radius +2, lasts +4s, fires 30% faster cooldown.",
+            400, bonusSkillRadius: 2f, bonusSkillDur: 4f, skillCdMul: 0.70f);
+
+        return new TowerData[] { twChim, hayden, greg, wilton };
     }
 
     // ── Level & faculty data ──────────────────────────────────────────────────

@@ -170,6 +170,7 @@ public static class EndlessMode
         c.flipWithDirection  = src.flipWithDirection;
         c.artFacesRight      = src.artFacesRight;
         c.visualScale        = src.visualScale;
+        c.playSpawnSound     = src.playSpawnSound;
         c.deathAnimatorOverride = src.deathAnimatorOverride;
         c.deathSpriteOverride   = src.deathSpriteOverride;
         c.deathFxDuration       = src.deathFxDuration;

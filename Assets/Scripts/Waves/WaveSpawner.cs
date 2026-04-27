@@ -158,6 +158,35 @@ public class WaveSpawner : MonoBehaviour
     /// <summary>Number of available spawn points on the current map.</summary>
     public int DebugSpawnPointCount => waypoints != null ? waypoints.SpawnPointCount : 0;
 
+    /// <summary>
+    /// Instantly ends the current round: stops any in-flight spawn coroutines,
+    /// kills every live enemy on the map (no gold rewards), and fires
+    /// <see cref="OnRoundComplete"/> so the gameplay flow continues normally.
+    /// Used by TW Chim's "King Crimson" once-per-game skip skill.
+    /// </summary>
+    public void SkipCurrentRound()
+    {
+        StopAllCoroutines();
+        isSpawning = false;
+
+        // Snapshot first so HandleEnemyRemoved decrements don't fight us.
+        Enemy[] live = FindObjectsByType<Enemy>(FindObjectsSortMode.None);
+        foreach (Enemy e in live)
+        {
+            if (e == null) continue;
+            // Just remove from the world — bypass Die so no gold is awarded.
+            Destroy(e.gameObject);
+        }
+
+        enemiesAlive = 0;
+        enemiesRemainingThisRound = 0;
+        OnEnemyCountChanged?.Invoke(0);
+        OnRoundComplete?.Invoke(currentRound);
+        currentRound++;
+        if (!isEndless && rounds != null && currentRound >= rounds.Length)
+            OnAllRoundsComplete?.Invoke();
+    }
+
     /// <summary>Spawn split-enemies in place when a Splitter dies. Each child
     /// inherits the parent's path and starts at the parent's current waypoint
     /// index so it doesn't snap back to the spawn. Counts toward the

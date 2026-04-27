@@ -6,7 +6,10 @@ public enum HeroSkillEffect
     SlowField,            // slows all enemies inside radius for a duration
     EmpowerAllies,        // temporarily boosts damage of all placed towers
     RestoreLives,         // restores lost lives
-    GroundTargetedAOE     // player picks a world position, then a DoT zone is placed there
+    GroundTargetedAOE,    // player picks a world position, then a DoT zone is placed there
+    SkipRound,            // instantly clears every enemy on the map and ends the current wave
+    PullToCenter,         // drags enemies inside radius toward the placed point for a duration
+    AttackSpeedAura       // temporarily boosts fire rate of every tower inside radius
 }
 
 [CreateAssetMenu(fileName = "NewHeroSkill", menuName = "Graduation/Hero Skill")]
@@ -46,4 +49,24 @@ public class HeroSkillData : ScriptableObject
     public float aoeDuration      = 3f;
     [Tooltip("Damage type dealt by each tick.")]
     public DamageType aoeDamageType = DamageType.Pierce;
+
+    [Header("Pull To Center")]
+    [Tooltip("World units per second every affected enemy is dragged toward the placed point.")]
+    public float pullStrength = 4f;
+    [Tooltip("How long the pull keeps acting on enemies inside the radius.")]
+    public float pullDuration = 1.5f;
+
+    [Header("Attack Speed Aura")]
+    [Tooltip("Fire rate multiplier applied to every tower inside the radius.")]
+    public float attackSpeedMultiplier = 1.6f;
+    [Tooltip("How long the attack-speed buff lasts on each affected tower.")]
+    public float attackSpeedDuration   = 6f;
+
+    [Header("Once Per Game / Audio")]
+    [Tooltip("If true, this skill can only be cast once for the entire run regardless of cooldown.")]
+    public bool   oncePerGame      = false;
+    [Tooltip("Optional. Resource path (no extension) of an AudioClip under Assets/Resources/ played when the skill fires. e.g. 'kingcrimson'.")]
+    public string audioClipResource = "";
+    [Tooltip("Volume the resource clip is played at.")]
+    [Range(0f, 1f)] public float audioVolume = 0.85f;
 }

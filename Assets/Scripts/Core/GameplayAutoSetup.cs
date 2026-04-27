@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 // Marathon mode hook is in this same global namespace.
 
@@ -67,6 +68,11 @@ public class GameplayAutoSetup : MonoBehaviour
     private TextMeshProUGUI towerShopToggleLabel;
     private TextMeshProUGUI heroShopToggleLabel;
 
+    // Hero tooltip shared popup
+    private GameObject       heroTooltipPanel;
+    private TextMeshProUGUI  heroTooltipText;
+    private RectTransform    heroTooltipRect;
+
     // Marathon buff history
     private GameObject buffHistoryPanel;
     private Button buffHistoryToggleButton;
@@ -76,6 +82,8 @@ public class GameplayAutoSetup : MonoBehaviour
     void Start()
     {
         DeployedUniqueRegistry.Reset();
+        HeroTower.ResetOncePerGameUsage();
+        CurrencyManager.ResetAuras();
         CreateManagers();
         EnsureTowerPrefabIsClickable();
         CreateCamera();
@@ -833,9 +841,142 @@ public class GameplayAutoSetup : MonoBehaviour
             }
 
             btn.GetComponent<Button>().onClick.AddListener(() => OnTowerSelected(td, prof));
+
+            // Hero hover tooltip: show a popup describing the active skill.
+            if (prof && td.heroSkill != null)
+            {
+                EnsureHeroTooltip(shopPanel.transform.root as RectTransform);
+                EventTrigger trig = btn.GetComponent<EventTrigger>();
+                if (trig == null) trig = btn.AddComponent<EventTrigger>();
+
+                EventTrigger.Entry enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+                RectTransform btnRectCap = btnRect;
+                TowerData     tdCap      = td;
+                enter.callback.AddListener((_) => ShowHeroTooltip(tdCap, btnRectCap));
+                trig.triggers.Add(enter);
+
+                EventTrigger.Entry exit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+                exit.callback.AddListener((_) => HideHeroTooltip());
+                trig.triggers.Add(exit);
+            }
         }
 
         return shopPanel;
+    }
+
+    void EnsureHeroTooltip(RectTransform canvasRoot)
+    {
+        if (heroTooltipPanel != null) return;
+        if (canvasRoot == null) return;
+
+        heroTooltipPanel = CreatePanel(canvasRoot, "HeroTooltip", new Color(0.05f, 0.04f, 0.02f, 0.96f));
+        heroTooltipRect  = heroTooltipPanel.GetComponent<RectTransform>();
+        // Free-floating; we'll position it manually each show.
+        heroTooltipRect.anchorMin = new Vector2(0f, 0f);
+        heroTooltipRect.anchorMax = new Vector2(0f, 0f);
+        heroTooltipRect.pivot     = new Vector2(1f, 0.5f);   // anchor right-center of tooltip to the button's left edge
+        heroTooltipRect.sizeDelta = new Vector2(320f, 180f);
+
+        // Gold border via Outline component on a child Image.
+        Outline outline = heroTooltipPanel.AddComponent<Outline>();
+        outline.effectColor = new Color(0.85f, 0.65f, 0.15f, 1f);
+        outline.effectDistance = new Vector2(2, -2);
+
+        GameObject txtGo = CreateText(heroTooltipPanel.transform, "TooltipText", "", 16, new Color(0.98f, 0.95f, 0.82f));
+        heroTooltipText = txtGo.GetComponent<TextMeshProUGUI>();
+        heroTooltipText.alignment    = TextAlignmentOptions.TopLeft;
+        heroTooltipText.enableWordWrapping = true;
+        heroTooltipText.margin       = new Vector4(10, 8, 10, 8);
+        RectTransform txtRT = txtGo.GetComponent<RectTransform>();
+        txtRT.anchorMin = Vector2.zero;
+        txtRT.anchorMax = Vector2.one;
+        txtRT.offsetMin = Vector2.zero;
+        txtRT.offsetMax = Vector2.zero;
+
+        heroTooltipPanel.transform.SetAsLastSibling();
+        heroTooltipPanel.SetActive(false);
+    }
+
+    void ShowHeroTooltip(TowerData td, RectTransform anchorBtn)
+    {
+        if (heroTooltipPanel == null || heroTooltipText == null || td == null || td.heroSkill == null) return;
+
+        HeroSkillData s = td.heroSkill;
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<b><color=#FFD27F>").Append(td.towerName).Append("</color></b>\n");
+        sb.Append("<b>").Append(s.skillName).Append("</b>");
+        if (s.oncePerGame) sb.Append(" <color=#FF8080>(once per game)</color>");
+        sb.Append('\n');
+        if (!string.IsNullOrEmpty(s.description))
+            sb.Append(s.description).Append("\n\n");
+        else
+            sb.Append('\n');
+
+        sb.Append("<color=#A8C8FF>Cooldown:</color> ").Append(Mathf.RoundToInt(s.cooldown)).Append("s\n");
+        if (s.radius > 0.01f)
+            sb.Append("<color=#A8C8FF>Radius:</color> ").Append(s.radius.ToString("0.#")).Append('\n');
+
+        switch (s.effect)
+        {
+            case HeroSkillEffect.AoEBlast:
+                sb.Append("<color=#A8C8FF>Damage:</color> ").Append(s.blastDamage).Append('\n');
+                break;
+            case HeroSkillEffect.GroundTargetedAOE:
+                sb.Append("<color=#A8C8FF>DPS:</color> ").Append(s.aoeDamagePerTick).Append("/tick  for ").Append(s.aoeDuration.ToString("0.#")).Append("s\n");
+                break;
+            case HeroSkillEffect.SlowField:
+                sb.Append("<color=#A8C8FF>Slow:</color> x").Append(s.slowMultiplier.ToString("0.##")).Append("  for ").Append(s.slowDuration.ToString("0.#")).Append("s\n");
+                break;
+            case HeroSkillEffect.EmpowerAllies:
+                sb.Append("<color=#A8C8FF>Tower dmg:</color> x").Append(s.empowerMultiplier.ToString("0.##")).Append("  for ").Append(s.empowerDuration.ToString("0.#")).Append("s\n");
+                break;
+            case HeroSkillEffect.PullToCenter:
+                sb.Append("<color=#A8C8FF>Pull str:</color> ").Append(s.pullStrength.ToString("0.#")).Append("  for ").Append(s.pullDuration.ToString("0.#")).Append("s\n");
+                break;
+            case HeroSkillEffect.AttackSpeedAura:
+                sb.Append("<color=#A8C8FF>Tower rate:</color> x").Append(s.attackSpeedMultiplier.ToString("0.##")).Append("  for ").Append(s.attackSpeedDuration.ToString("0.#")).Append("s\n");
+                break;
+            case HeroSkillEffect.RestoreLives:
+                sb.Append("<color=#A8FFA8>Restores ").Append(s.livesRestored).Append(" lives.</color>\n");
+                break;
+            case HeroSkillEffect.SkipRound:
+                sb.Append("<color=#FF8080>Instantly ends current round.</color>\n");
+                break;
+        }
+
+        if (td.goldGainAura > 0.001f)
+            sb.Append("<color=#FFE680>Passive: +").Append(Mathf.RoundToInt(td.goldGainAura * 100f)).Append("% gold while alive.</color>\n");
+
+        heroTooltipText.text = sb.ToString();
+
+        // Position the tooltip just to the LEFT of the button (the hero panel
+        // is on the right side of the screen).
+        if (heroTooltipRect != null && anchorBtn != null)
+        {
+            Vector3[] corners = new Vector3[4];
+            anchorBtn.GetWorldCorners(corners);
+            // corners: 0 = bottom-left, 1 = top-left
+            Vector3 leftMid = (corners[0] + corners[1]) * 0.5f;
+            // Convert to local space of the tooltip's parent.
+            RectTransform parentRT = heroTooltipRect.parent as RectTransform;
+            if (parentRT != null)
+            {
+                Vector2 local;
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                    parentRT,
+                    RectTransformUtility.WorldToScreenPoint(null, leftMid),
+                    null, out local);
+                heroTooltipRect.anchoredPosition = local + new Vector2(-12f, 0f);
+            }
+        }
+
+        heroTooltipPanel.transform.SetAsLastSibling();
+        heroTooltipPanel.SetActive(true);
+    }
+
+    void HideHeroTooltip()
+    {
+        if (heroTooltipPanel != null) heroTooltipPanel.SetActive(false);
     }
 
     void OnTowerSelected(TowerData data, bool isProfessor)

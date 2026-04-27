@@ -49,10 +49,14 @@ public class TowerData : ScriptableObject
     [Range(0f, 1f)] public float splashDamageFraction = 0.6f;
 
     [Header("Slow on Hit")]
-    [Tooltip("Speed multiplier applied to enemies hit (and splashed). 1 = no slow, 0.5 = half speed.")]
-    [Range(0.1f, 1f)] public float slowOnHitMultiplier = 1f;
+    [Tooltip("Speed multiplier applied to enemies hit (and splashed). 1 = no slow, 0.5 = half speed, 0 = fully stopped (stun-like).")]
+    [Range(0f, 1f)] public float slowOnHitMultiplier = 1f;
     [Tooltip("Duration in seconds of the on-hit slow.")]
     public float slowOnHitDuration = 0f;
+
+    [Header("Gold Aura (passive while deployed)")]
+    [Tooltip("While at least one tower with this >0 is alive, every gold gain in the game is multiplied by (1 + sum of auras). 0.25 = +25% gold.")]
+    public float goldGainAura = 0f;
 
     [Header("Projectile Trajectory")]
     [Tooltip("If > 0, the projectile follows a parabolic arc to its target (peak height in world units). Use this for cannon-style lobs. 0 = straight-line homing.")]
@@ -109,4 +113,14 @@ public class TowerUpgrade
     public float slowMultiplierScale = 1f;
     [Tooltip("Adds to slow duration in seconds.")]
     public float bonusSlowDuration   = 0f;
+
+    [Header("Hero skill modifiers (only meaningful on hero upgrades)")]
+    [Tooltip("Multiplies the hero's active-skill cooldown. 0.85 = -15% cooldown. Stacks multiplicatively across upgrades.")]
+    public float upgradeSkillCooldownMultiplier = 1f;
+    [Tooltip("Multiplies the hero's active-skill effect magnitude (blast damage, DoT, slow strength, pull strength, attack-speed/empower bonus). Stacks multiplicatively.")]
+    public float upgradeSkillEffectMultiplier  = 1f;
+    [Tooltip("Adds to the hero's active-skill radius. Stacks additively.")]
+    public float upgradeSkillRadiusBonus       = 0f;
+    [Tooltip("Adds to the hero's active-skill duration. Stacks additively.")]
+    public float upgradeSkillDurationBonus     = 0f;
 }
