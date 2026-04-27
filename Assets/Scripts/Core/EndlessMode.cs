@@ -170,6 +170,10 @@ public static class EndlessMode
         c.flipWithDirection  = src.flipWithDirection;
         c.artFacesRight      = src.artFacesRight;
         c.visualScale        = src.visualScale;
+        c.deathAnimatorOverride = src.deathAnimatorOverride;
+        c.deathSpriteOverride   = src.deathSpriteOverride;
+        c.deathFxDuration       = src.deathFxDuration;
+        c.deathFxScale          = src.deathFxScale;
         c.archetype    = src.archetype;
         c.shieldHealth = Mathf.Max(0, Mathf.RoundToInt(src.shieldHealth * hpMul));
         c.bossScale    = src.bossScale;

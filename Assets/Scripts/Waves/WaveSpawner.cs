@@ -141,6 +141,23 @@ public class WaveSpawner : MonoBehaviour
         // counted the whole wave at the start of the round.
     }
 
+    /// <summary>Debug helper: spawn one enemy of the given type at the given
+    /// spawn point without affecting the round's enemy count or HUD.
+    /// Used by the in-game enemy spawner debug panel.</summary>
+    public void DebugSpawn(EnemyData enemyData, int spawnPointIndex)
+    {
+        if (enemyData == null || enemyPrefab == null || waypoints == null) return;
+        Vector3 spawnPos = waypoints.GetSpawnPosition(spawnPointIndex);
+        GameObject obj = Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
+        Enemy enemy = obj.GetComponent<Enemy>();
+        enemy.Initialize(enemyData, waypoints.GetPathFor(spawnPointIndex));
+        // Note: deliberately not touching enemiesAlive / enemiesRemainingThisRound
+        // so debug spawns don't break round-end detection.
+    }
+
+    /// <summary>Number of available spawn points on the current map.</summary>
+    public int DebugSpawnPointCount => waypoints != null ? waypoints.SpawnPointCount : 0;
+
     /// <summary>Spawn split-enemies in place when a Splitter dies. Each child
     /// inherits the parent's path and starts at the parent's current waypoint
     /// index so it doesn't snap back to the spawn. Counts toward the

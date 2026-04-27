@@ -322,7 +322,11 @@ public class QuickTestBootstrap : MonoBehaviour
         shielded.goldReward  = 20;
         shielded.courseTier  = 2;
         shielded.archetype   = EnemyArchetype.Shielded;
+        shielded.sprite       = Resources.Load<Sprite>("Sprites/tungtungtung");
+        shielded.animatorController = null;
+        shielded.artFacesRight      = false;
         shielded.shieldHealth = 80;
+        shielded.visualScale = 1f;
 
         EnemyData stealth = ScriptableObject.CreateInstance<EnemyData>();
         stealth.enemyName  = "Stealth Bug";
@@ -331,6 +335,9 @@ public class QuickTestBootstrap : MonoBehaviour
         stealth.goldReward = 30;
         stealth.courseTier = 2;
         stealth.archetype  = EnemyArchetype.Stealth;
+        stealth.animatorController = Resources.Load<RuntimeAnimatorController>("Animators/dad");
+        stealth.artFacesRight      = true;   // or false, depending on the art
+        stealth.visualScale        = 2f; 
 
         EnemyData boss = ScriptableObject.CreateInstance<EnemyData>();
         boss.enemyName   = "Chatterbox";
@@ -341,6 +348,8 @@ public class QuickTestBootstrap : MonoBehaviour
         boss.courseTier  = 3;
         boss.archetype   = EnemyArchetype.Boss;
         boss.bossScale   = 2.2f;
+        boss.deathAnimatorOverride = Resources.Load<RuntimeAnimatorController>("Animators/dogrest");
+        boss.deathFxDuration = 1.5f; // seconds the death animation plays before the FX is destroyed
 
         // Splitter child template — small basic that splits make.
         EnemyData splitChild = ScriptableObject.CreateInstance<EnemyData>();
@@ -350,6 +359,13 @@ public class QuickTestBootstrap : MonoBehaviour
         splitChild.goldReward  = 5;
         splitChild.courseTier  = 1;
         splitChild.archetype   = EnemyArchetype.Standard;
+        splitChild.sprite  = Resources.Load<Sprite>("Sprites/tralalelotralala");
+        splitChild.animatorController  = null;
+        splitChild.artFacesRight      = false;
+        splitChild.visualScale = 0.5f;
+
+    
+
 
         EnemyData splitter = ScriptableObject.CreateInstance<EnemyData>();
         splitter.enemyName  = "Splitter Bug";
@@ -360,6 +376,10 @@ public class QuickTestBootstrap : MonoBehaviour
         splitter.archetype  = EnemyArchetype.Splitter;
         splitter.splitInto  = splitChild;
         splitter.splitCount = 2;
+        splitter.sprite  = Resources.Load<Sprite>("Sprites/tralalelotralala");
+        splitter.animatorController  = null;
+        splitter.artFacesRight      = false;
+        splitter.visualScale = 1.1f;
 
         EnemyData shieldAura = ScriptableObject.CreateInstance<EnemyData>();
         shieldAura.enemyName          = "Aura Bug";
@@ -371,7 +391,9 @@ public class QuickTestBootstrap : MonoBehaviour
         shieldAura.shieldAuraRadius   = 2.5f;
         shieldAura.shieldAuraAmount   = 30;
         shieldAura.shieldAuraInterval = 3f;
-
+        shieldAura.animatorController = Resources.Load<RuntimeAnimatorController>("Animators/dad");
+        shieldAura.artFacesRight      = true;   // or false, depending on the art
+        shieldAura.visualScale        = 2f;   // optional size tweak
         return new EnemyData[] { basic, fast, tank, shielded, stealth, boss, splitter, shieldAura };
     }
 
