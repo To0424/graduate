@@ -29,6 +29,8 @@ public class TowerData : ScriptableObject
     public Sprite sprite;
     [Tooltip("Optional icon shown in the radial build palette. If empty, uses tower sprite.")]
     public Sprite buildMenuIcon;
+    [Tooltip("Overall world size multiplier for the placed tower sprite.")]
+    public float worldScale = 0.2f;
     public GameObject projectilePrefab;
 
     [Header("Professor Tower")]

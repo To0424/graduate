@@ -64,9 +64,11 @@ public class Tower : MonoBehaviour
         if (sr != null)
         {
             sr.sprite = data.sprite != null ? data.sprite : RuntimeSprite.WhiteSquare;
-            if (data.sprite == null) sr.color = GetTowerColor(data.towerType);
+            sr.color = Color.white;
             sr.sortingOrder = 4;
         }
+
+        transform.localScale = Vector3.one * Mathf.Max(0.05f, data.worldScale);
 
         firePoint = transform.Find("FirePoint");
         if (firePoint == null)
@@ -174,8 +176,9 @@ public class Tower : MonoBehaviour
         if (sr != null)
         {
             sr.sprite = newData.sprite != null ? newData.sprite : RuntimeSprite.WhiteSquare;
-            if (newData.sprite == null) sr.color = GetTowerColor(newData.towerType);
+            sr.color = Color.white;
         }
+        transform.localScale = Vector3.one * Mathf.Max(0.05f, newData.worldScale);
     }
 
     /// <summary>Called by EmpowerAllies to temporarily increase this tower's shot damage.</summary>
@@ -375,7 +378,18 @@ public class Tower : MonoBehaviour
 
     void RotateTowardsTarget()
     {
-        if (targetEnemy == null) return;
+        if (data == null || data.towerType != TowerType.Rapid || data.towerType != TowerType.Cannon)
+        {
+            transform.rotation = Quaternion.identity;
+            return;
+        }
+
+        if (targetEnemy == null)
+        {
+            transform.rotation = Quaternion.identity;
+            return;
+        }
+
         Vector3 dir = targetEnemy.transform.position - transform.position;
         float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
         transform.rotation = Quaternion.Euler(0, 0, angle - 90f);
