@@ -25,7 +25,10 @@ public class TowerData : ScriptableObject
     public float range = 3f;
     public float fireRate = 1f;  // shots per second
     public int damage = 25;
+    [Tooltip("Sprite shown on the placed tower in the world.")]
     public Sprite sprite;
+    [Tooltip("Optional icon shown in the radial build palette. If empty, uses tower sprite.")]
+    public Sprite buildMenuIcon;
     public GameObject projectilePrefab;
 
     [Header("Professor Tower")]

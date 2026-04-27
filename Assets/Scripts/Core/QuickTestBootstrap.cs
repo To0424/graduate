@@ -42,6 +42,14 @@ public class QuickTestBootstrap : MonoBehaviour
     public Sprite cannonTowerIcon;
     public Sprite frostTowerIcon;
 
+    [Header("Optional Tower World Sprite Overrides (QuickTest)")]
+    [Tooltip("Sprite shown on placed towers. If left empty, code will try Resources/TowerSprites/*.png by tower key.")]
+    public Sprite rapidTowerSprite;
+    public Sprite balancedTowerSprite;
+    public Sprite sniperTowerSprite;
+    public Sprite cannonTowerSprite;
+    public Sprite frostTowerSprite;
+
     // ── Entry point ───────────────────────────────────────────────────────────
 
     void Awake()
@@ -410,7 +418,8 @@ public class QuickTestBootstrap : MonoBehaviour
         rapid.damage           = 10;
         rapid.projectilePrefab = projPrefab;
         rapid.damageType       = DamageType.Normal;
-        rapid.sprite           = ResolveTowerIcon(rapidTowerIcon, "rapid", "Rapid Tower");
+        rapid.sprite           = ResolveTowerSprite(rapidTowerSprite, "rapid", "Rapid Tower");
+        rapid.buildMenuIcon    = ResolveTowerIcon(rapidTowerIcon, "rapid", "Rapid Tower");
 
         TowerData balanced = ScriptableObject.CreateInstance<TowerData>();
         balanced.towerName        = "Balanced Tower";
@@ -421,7 +430,8 @@ public class QuickTestBootstrap : MonoBehaviour
         balanced.damage           = 25;
         balanced.projectilePrefab = projPrefab;
         balanced.damageType       = DamageType.Normal;
-        balanced.sprite           = ResolveTowerIcon(balancedTowerIcon, "balanced", "Balanced Tower");
+        balanced.sprite           = ResolveTowerSprite(balancedTowerSprite, "balanced", "Balanced Tower");
+        balanced.buildMenuIcon    = ResolveTowerIcon(balancedTowerIcon, "balanced", "Balanced Tower");
 
         TowerData sniper = ScriptableObject.CreateInstance<TowerData>();
         sniper.towerName        = "Sniper Tower";
@@ -433,7 +443,8 @@ public class QuickTestBootstrap : MonoBehaviour
         sniper.projectilePrefab = projPrefab;
         sniper.damageType       = DamageType.Pierce;  // pierce test
         sniper.hasDetection     = true; // can reveal stealth enemies
-        sniper.sprite           = ResolveTowerIcon(sniperTowerIcon, "sniper", "Sniper Tower");
+        sniper.sprite           = ResolveTowerSprite(sniperTowerSprite, "sniper", "Sniper Tower");
+        sniper.buildMenuIcon    = ResolveTowerIcon(sniperTowerIcon, "sniper", "Sniper Tower");
 
         // AOE Cannon — splash damage in a small radius around impact.
         TowerData cannon = ScriptableObject.CreateInstance<TowerData>();
@@ -451,7 +462,8 @@ public class QuickTestBootstrap : MonoBehaviour
         // a straight bullet. Tweak arcHeight in the inspector or here to
         // taste; 1.2 world-units gives a nice mid-flight peak.
         cannon.arcHeight            = 1.2f;
-        cannon.sprite               = ResolveTowerIcon(cannonTowerIcon, "cannon", "AOE Cannon");
+        cannon.sprite               = ResolveTowerSprite(cannonTowerSprite, "cannon", "AOE Cannon");
+        cannon.buildMenuIcon        = ResolveTowerIcon(cannonTowerIcon, "cannon", "AOE Cannon");
 
         // Frost Tower — small splash + slows on hit.
         TowerData frost = ScriptableObject.CreateInstance<TowerData>();
@@ -467,7 +479,8 @@ public class QuickTestBootstrap : MonoBehaviour
         frost.splashDamageFraction = 1f;
         frost.slowOnHitMultiplier  = 0.5f;
         frost.slowOnHitDuration    = 2f;
-        frost.sprite               = ResolveTowerIcon(frostTowerIcon, "frost", "Frost Tower");
+        frost.sprite               = ResolveTowerSprite(frostTowerSprite, "frost", "Frost Tower");
+        frost.buildMenuIcon        = ResolveTowerIcon(frostTowerIcon, "frost", "Frost Tower");
 
         // Wire upgrade paths + capstone perks for each regular tower.
         AssignTowerUpgrades(rapid, balanced, sniper, cannon, frost);
@@ -545,6 +558,18 @@ public class QuickTestBootstrap : MonoBehaviour
         Sprite fromResources = Resources.Load<Sprite>($"TowerIcons/{key}");
         if (fromResources == null)
             Debug.LogWarning($"[QuickTest] Missing icon for '{towerName}'. Assign in QuickTestBootstrap inspector or add Resources/TowerIcons/{key}.png");
+        return fromResources;
+    }
+
+    Sprite ResolveTowerSprite(Sprite inspectorSprite, string key, string towerName)
+    {
+        if (inspectorSprite != null) return inspectorSprite;
+
+        // Optional fallback for placed tower visuals.
+        // Put files in Assets/Resources/TowerSprites/ with names rapid/balanced/sniper/cannon/frost.
+        Sprite fromResources = Resources.Load<Sprite>($"TowerSprites/{key}");
+        if (fromResources == null)
+            Debug.LogWarning($"[QuickTest] Missing world sprite for '{towerName}'. Assign in QuickTestBootstrap inspector or add Resources/TowerSprites/{key}.png");
         return fromResources;
     }
 

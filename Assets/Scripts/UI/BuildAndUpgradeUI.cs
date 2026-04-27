@@ -266,7 +266,8 @@ public class BuildAndUpgradeUI : MonoBehaviour
         iconRT.sizeDelta = new Vector2(iconSize, iconSize);
         iconRT.localEulerAngles = new Vector3(0f, 0f, -wedgeRotation);
         Image icon = iconObj.AddComponent<Image>();
-        icon.sprite = td.sprite != null ? td.sprite : RuntimeSprite.WhiteSquare;
+        Sprite uiIcon = td.buildMenuIcon != null ? td.buildMenuIcon : td.sprite;
+        icon.sprite = uiIcon != null ? uiIcon : RuntimeSprite.WhiteSquare;
         icon.preserveAspect = true;
         icon.color = affordable ? Color.white : new Color(0.55f, 0.55f, 0.55f, 0.95f);
         icon.raycastTarget = false;
