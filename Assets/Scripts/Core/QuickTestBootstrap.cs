@@ -34,6 +34,14 @@ public class QuickTestBootstrap : MonoBehaviour
     [Tooltip("If assigned, this prefab is used for spawned enemies instead of the procedural red-circle one. Drag your Assets/Prefabs/Enemy.prefab here to use the animated version.")]
     public GameObject enemyPrefabOverride;
 
+    [Header("Optional Tower Icon Overrides (QuickTest)")]
+    [Tooltip("Used by runtime-generated QuickTest towers. If left empty, code will try Resources/TowerIcons/*.png by tower key.")]
+    public Sprite rapidTowerIcon;
+    public Sprite balancedTowerIcon;
+    public Sprite sniperTowerIcon;
+    public Sprite cannonTowerIcon;
+    public Sprite frostTowerIcon;
+
     // ── Entry point ───────────────────────────────────────────────────────────
 
     void Awake()
@@ -405,6 +413,7 @@ public class QuickTestBootstrap : MonoBehaviour
         rapid.damage           = 10;
         rapid.projectilePrefab = projPrefab;
         rapid.damageType       = DamageType.Normal;
+        rapid.sprite           = ResolveTowerIcon(rapidTowerIcon, "rapid", "Rapid Tower");
 
         TowerData balanced = ScriptableObject.CreateInstance<TowerData>();
         balanced.towerName        = "Balanced Tower";
@@ -415,6 +424,7 @@ public class QuickTestBootstrap : MonoBehaviour
         balanced.damage           = 25;
         balanced.projectilePrefab = projPrefab;
         balanced.damageType       = DamageType.Normal;
+        balanced.sprite           = ResolveTowerIcon(balancedTowerIcon, "balanced", "Balanced Tower");
 
         TowerData sniper = ScriptableObject.CreateInstance<TowerData>();
         sniper.towerName        = "Sniper Tower";
@@ -426,6 +436,7 @@ public class QuickTestBootstrap : MonoBehaviour
         sniper.projectilePrefab = projPrefab;
         sniper.damageType       = DamageType.Pierce;  // pierce test
         sniper.hasDetection     = true; // can reveal stealth enemies
+        sniper.sprite           = ResolveTowerIcon(sniperTowerIcon, "sniper", "Sniper Tower");
 
         // AOE Cannon — splash damage in a small radius around impact.
         TowerData cannon = ScriptableObject.CreateInstance<TowerData>();
@@ -443,6 +454,7 @@ public class QuickTestBootstrap : MonoBehaviour
         // a straight bullet. Tweak arcHeight in the inspector or here to
         // taste; 1.2 world-units gives a nice mid-flight peak.
         cannon.arcHeight            = 1.2f;
+        cannon.sprite               = ResolveTowerIcon(cannonTowerIcon, "cannon", "AOE Cannon");
 
         // Frost Tower — small splash + slows on hit.
         TowerData frost = ScriptableObject.CreateInstance<TowerData>();
@@ -458,6 +470,7 @@ public class QuickTestBootstrap : MonoBehaviour
         frost.splashDamageFraction = 1f;
         frost.slowOnHitMultiplier  = 0.5f;
         frost.slowOnHitDuration    = 2f;
+        frost.sprite               = ResolveTowerIcon(frostTowerIcon, "frost", "Frost Tower");
 
         // Wire upgrade paths + capstone perks for each regular tower.
         AssignTowerUpgrades(rapid, balanced, sniper, cannon, frost);
@@ -533,6 +546,18 @@ public class QuickTestBootstrap : MonoBehaviour
         };
         all.AddRange(faculty);
         return all.ToArray();
+    }
+
+    Sprite ResolveTowerIcon(Sprite inspectorSprite, string key, string towerName)
+    {
+        if (inspectorSprite != null) return inspectorSprite;
+
+        // Optional fallback for quick tests: put sprites in Assets/Resources/TowerIcons/
+        // and name them using keys like rapid, balanced, sniper, cannon, frost.
+        Sprite fromResources = Resources.Load<Sprite>($"TowerIcons/{key}");
+        if (fromResources == null)
+            Debug.LogWarning($"[QuickTest] Missing icon for '{towerName}'. Assign in QuickTestBootstrap inspector or add Resources/TowerIcons/{key}.png");
+        return fromResources;
     }
 
     // ── Wave data ─────────────────────────────────────────────────────────────
