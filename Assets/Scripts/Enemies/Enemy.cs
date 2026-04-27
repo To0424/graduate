@@ -96,9 +96,15 @@ public class Enemy : MonoBehaviour
         if (animComp != null && data.animatorController != null)
             animComp.runtimeAnimatorController = data.animatorController;
 
+        // If this enemy specifies a static sprite but NO animator controller,
+        // disable the Animator so the prefab's default animation doesn't
+        // override the static art.
+        if (animComp != null && data.animatorController == null && data.sprite != null)
+            animComp.enabled = false;
+
         // If this prefab has an Animator driving the SpriteRenderer, don't
         // overwrite its sprite or tint — let the animation play as authored.
-        bool hasAnimator = animComp != null && animComp.runtimeAnimatorController != null;
+        bool hasAnimator = animComp != null && animComp.enabled && animComp.runtimeAnimatorController != null;
         if (hasAnimator)
         {
             sr.color = Color.white;

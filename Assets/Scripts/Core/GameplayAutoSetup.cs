@@ -89,6 +89,7 @@ public class GameplayAutoSetup : MonoBehaviour
         CreateHeroSkillUI(canvas.transform);
         CreateRoundCompleteBanner(canvas);
         EnsureInGameSlotDebugEditor();
+        EnsureEnemySpawnDebugPanel();
         BringControlButtonsToFront();
         SetupLevel();
     }
@@ -98,6 +99,13 @@ public class GameplayAutoSetup : MonoBehaviour
         if (FindFirstObjectByType<InGameSlotDebugEditor>() != null) return;
         GameObject go = new GameObject("InGameSlotDebugEditor");
         go.AddComponent<InGameSlotDebugEditor>();
+    }
+
+    void EnsureEnemySpawnDebugPanel()
+    {
+        if (FindFirstObjectByType<EnemySpawnDebugPanel>() != null) return;
+        GameObject go = new GameObject("EnemySpawnDebugPanel");
+        go.AddComponent<EnemySpawnDebugPanel>();
     }
 
     void CreateRoundCompleteBanner(Canvas canvas)

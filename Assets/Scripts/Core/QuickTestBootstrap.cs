@@ -314,7 +314,11 @@ public class QuickTestBootstrap : MonoBehaviour
         shielded.goldReward  = 20;
         shielded.courseTier  = 2;
         shielded.archetype   = EnemyArchetype.Shielded;
+        shielded.sprite       = Resources.Load<Sprite>("Sprites/tungtungtung");
+        shielded.animatorController = null;
+        shielded.artFacesRight      = false;
         shielded.shieldHealth = 80;
+        shielded.visualScale = 1f;
 
         EnemyData stealth = ScriptableObject.CreateInstance<EnemyData>();
         stealth.enemyName  = "Stealth Bug";
