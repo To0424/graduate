@@ -22,7 +22,7 @@ public static class EnemyDeathFX
     static RuntimeAnimatorController _defaultController;
     static bool _defaultLookupDone;
 
-    public static void Spawn(EnemyData data, Vector3 position, Vector3 worldScale)
+    public static void Spawn(EnemyData data, Vector3 position, Vector3 worldScale, bool flipX = false)
     {
         if (data == null) return;
 
@@ -36,6 +36,7 @@ public static class EnemyDeathFX
 
         var sr = go.AddComponent<SpriteRenderer>();
         sr.sortingOrder = 6; // above enemies, below UI
+        sr.flipX = flipX;    // preserve the enemy's facing direction
         sr.sprite = data.deathSpriteOverride != null
                   ? data.deathSpriteOverride
                   : (data.sprite != null ? data.sprite : RuntimeSprite.Circle);

@@ -346,6 +346,13 @@ public class QuickTestBootstrap : MonoBehaviour
         splitChild.goldReward  = 5;
         splitChild.courseTier  = 1;
         splitChild.archetype   = EnemyArchetype.Standard;
+        splitChild.sprite  = Resources.Load<Sprite>("Sprites/tralalelotralala");
+        splitChild.animatorController  = null;
+        splitChild.artFacesRight      = false;
+        splitChild.visualScale = 0.5f;
+
+    
+
 
         EnemyData splitter = ScriptableObject.CreateInstance<EnemyData>();
         splitter.enemyName  = "Splitter Bug";
@@ -356,6 +363,10 @@ public class QuickTestBootstrap : MonoBehaviour
         splitter.archetype  = EnemyArchetype.Splitter;
         splitter.splitInto  = splitChild;
         splitter.splitCount = 2;
+        splitter.sprite  = Resources.Load<Sprite>("Sprites/tralalelotralala");
+        splitter.animatorController  = null;
+        splitter.artFacesRight      = false;
+        splitter.visualScale = 1.1f;
 
         EnemyData shieldAura = ScriptableObject.CreateInstance<EnemyData>();
         shieldAura.enemyName          = "Aura Bug";

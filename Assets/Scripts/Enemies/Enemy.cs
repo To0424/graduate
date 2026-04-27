@@ -562,7 +562,9 @@ public class Enemy : MonoBehaviour
             OnBossDefeated?.Invoke(this);
 
         // Spawn the smoke-puff (or per-enemy override) at the death position.
-        EnemyDeathFX.Spawn(data, transform.position, transform.localScale);
+        var srForFX = GetComponent<SpriteRenderer>();
+        bool flipX = srForFX != null && srForFX.flipX;
+        EnemyDeathFX.Spawn(data, transform.position, transform.localScale, flipX);
 
         Destroy(gameObject);
     }
