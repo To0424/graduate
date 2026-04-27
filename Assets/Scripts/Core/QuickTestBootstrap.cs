@@ -337,6 +337,8 @@ public class QuickTestBootstrap : MonoBehaviour
         boss.courseTier  = 3;
         boss.archetype   = EnemyArchetype.Boss;
         boss.bossScale   = 2.2f;
+        boss.deathAnimatorOverride = Resources.Load<RuntimeAnimatorController>("Animators/dogrest");
+        boss.deathFxDuration = 1.5f; // seconds the death animation plays before the FX is destroyed
 
         // Splitter child template — small basic that splits make.
         EnemyData splitChild = ScriptableObject.CreateInstance<EnemyData>();
