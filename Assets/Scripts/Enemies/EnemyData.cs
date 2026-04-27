@@ -44,6 +44,9 @@ public class EnemyData : ScriptableObject
     [Tooltip("Uniform scale multiplier applied to the enemy. Use to make sprites bigger or smaller without re-importing.")]
     public float visualScale = 1f;
 
+    [Tooltip("If true, plays the spawn audio clip (Resources/bibilabu) once when this enemy is initialized.")]
+    public bool playSpawnSound = false;
+
     [Header("Archetype")]
     public EnemyArchetype archetype = EnemyArchetype.Standard;
 

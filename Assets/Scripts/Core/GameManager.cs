@@ -160,6 +160,17 @@ public class GameManager : MonoBehaviour
         return IsFacultyCleared(faculty);
     }
 
+    /// <summary>
+    /// Debug: marks every course in the given faculty as completed so its
+    /// professor tower becomes immediately available. Does NOT persist.
+    /// </summary>
+    public void DebugUnlockFaculty(FacultyData faculty)
+    {
+        if (faculty == null || faculty.courses == null) return;
+        for (int i = 0; i < faculty.courses.Length; i++)
+            completedCourses.Add(GetCourseKey(faculty, i));
+    }
+
     string GetCourseKey(FacultyData faculty, int index)
     {
         return $"{faculty.facultyName}_{index}";

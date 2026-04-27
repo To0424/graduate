@@ -19,6 +19,13 @@ public class Tower : MonoBehaviour
     private float _tempDamageMult  = 1f;
     private float _tempDamageTimer = 0f;
 
+    // Temporary fire-rate boost from AttackSpeedAura hero skill
+    private float _tempFireRateMult  = 1f;
+    private float _tempFireRateTimer = 0f;
+
+    // Gold aura we registered with CurrencyManager (so we can unregister on death/replace).
+    private float _registeredGoldAura = 0f;
+
     // ── Upgrade tracking ─────────────────────────────────────────────────────
     public int path1Tier = 0;
     public int path2Tier = 0;    /// <summary>0 = none, 1 = capstone1 bought, 2 = capstone2 bought.</summary>
@@ -30,6 +37,17 @@ public class Tower : MonoBehaviour
     float _splashFractionScale = 1f;
     float _slowMultiplierScale = 1f;
     float _bonusSlowDuration   = 0f;
+
+    // Hero-skill modifiers stacked from upgrades. HeroTower reads these via
+    // the public getters below to compute its effective skill values.
+    float _skillCooldownMul   = 1f;
+    float _skillEffectMul     = 1f;
+    float _skillRadiusBonus   = 0f;
+    float _skillDurationBonus = 0f;
+    public float SkillCooldownMul   => _skillCooldownMul;
+    public float SkillEffectMul     => _skillEffectMul;
+    public float SkillRadiusBonus   => _skillRadiusBonus;
+    public float SkillDurationBonus => _skillDurationBonus;
     public virtual void Initialize(TowerData towerData, TowerSlot towerSlot)
     {
         data = towerData;
@@ -60,6 +78,19 @@ public class Tower : MonoBehaviour
             HeroTower hero = gameObject.AddComponent<HeroTower>();
             hero.InitializeHero(data.heroSkill);
         }
+
+        // Register passive gold aura with CurrencyManager.
+        if (data.goldGainAura > 0f)
+        {
+            _registeredGoldAura = data.goldGainAura;
+            CurrencyManager.RegisterAura(_registeredGoldAura);
+        }
+    }
+
+    void OnDestroy()
+    {
+        if (_registeredGoldAura > 0f)
+            CurrencyManager.UnregisterAura(_registeredGoldAura);
     }
 
     /// <summary>Buy an upgrade on path 1 or 2. Returns false if the next tier is unavailable.</summary>
@@ -121,6 +152,12 @@ public class Tower : MonoBehaviour
         _splashFractionScale *= Mathf.Max(0.01f, up.splashFractionMultiplier);
         _slowMultiplierScale *= Mathf.Max(0.01f, up.slowMultiplierScale);
         _bonusSlowDuration   += up.bonusSlowDuration;
+
+        // Hero-skill mods (no-op for non-hero towers; HeroTower reads them).
+        _skillCooldownMul   *= Mathf.Max(0.05f, up.upgradeSkillCooldownMultiplier);
+        _skillEffectMul     *= Mathf.Max(0.05f, up.upgradeSkillEffectMultiplier);
+        _skillRadiusBonus   += up.upgradeSkillRadiusBonus;
+        _skillDurationBonus += up.upgradeSkillDurationBonus;
     }
 
     /// <summary>Replace this tower's TowerData with an evolved version (preserves slot and upgrade state).</summary>
@@ -149,6 +186,24 @@ public class Tower : MonoBehaviour
 
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
         if (sr != null) StartCoroutine(EmpowerFlash(sr));
+    }
+
+    /// <summary>Called by AttackSpeedAura to temporarily increase this tower's fire rate.</summary>
+    public void ApplyTemporaryFireRateBoost(float multiplier, float duration)
+    {
+        _tempFireRateMult  = Mathf.Max(0.1f, multiplier);
+        _tempFireRateTimer = duration;
+
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        if (sr != null) StartCoroutine(FireRateFlash(sr, duration));
+    }
+
+    System.Collections.IEnumerator FireRateFlash(SpriteRenderer sr, float duration)
+    {
+        Color original = sr.color;
+        sr.color = new Color(0.95f, 0.55f, 0.10f);
+        yield return new WaitForSeconds(duration);
+        if (sr != null) sr.color = original;
     }
 
     System.Collections.IEnumerator EmpowerFlash(SpriteRenderer sr)
@@ -202,6 +257,14 @@ public class Tower : MonoBehaviour
                 _tempDamageMult = 1f;
         }
 
+        // Tick temporary fire-rate boost timer
+        if (_tempFireRateTimer > 0f)
+        {
+            _tempFireRateTimer -= Time.deltaTime;
+            if (_tempFireRateTimer <= 0f)
+                _tempFireRateMult = 1f;
+        }
+
         // Detection towers reveal / conceal stealth enemies every frame
         if (data != null && data.hasDetection)
             HandleDetection();
@@ -211,7 +274,7 @@ public class Tower : MonoBehaviour
             targetEnemy = FindClosestEnemy();
         }
 
-        if (targetEnemy != null && fireTimer >= 1f / currentFireRate)
+        if (targetEnemy != null && fireTimer >= 1f / (currentFireRate * _tempFireRateMult))
         {
             Shoot();
             fireTimer = 0f;

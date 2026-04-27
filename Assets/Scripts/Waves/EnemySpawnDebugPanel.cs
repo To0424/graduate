@@ -63,13 +63,12 @@ public class EnemySpawnDebugPanel : MonoBehaviour
         rt.anchorMax = new Vector2(1f, 1f);
         rt.pivot = new Vector2(1f, 1f);
         rt.anchoredPosition = new Vector2(-18f, -18f);
-        rt.sizeDelta = new Vector2(280f, 420f);
-
+        rt.sizeDelta = new Vector2(300f, 560f);
         Image bg = rootPanel.AddComponent<Image>();
         bg.color = new Color(0f, 0f, 0f, 0.78f);
 
         // Header
-        AddText(rootPanel.transform, "TITLE", "ENEMY SPAWNER (F2)",
+        AddText(rootPanel.transform, "TITLE", "ENEMY / HERO DEBUG (F2)",
                 new Vector2(0f, 1f), new Vector2(1f, 1f),
                 new Vector2(0f, -8f), new Vector2(0f, 24f), 14, FontStyle.Bold);
 
@@ -145,24 +144,152 @@ public class EnemySpawnDebugPanel : MonoBehaviour
         for (int i = listParent.childCount - 1; i >= 0; i--)
             Destroy(listParent.GetChild(i).gameObject);
 
+        // ── Enemy section ──
+        AddSectionHeader(listParent, "ENEMIES — click to spawn");
         var enemies = GatherEnemies();
         if (enemies.Count == 0)
         {
             AddText(listParent, "Empty", "(no enemies found)",
                     new Vector2(0f, 0f), new Vector2(1f, 1f),
                     Vector2.zero, Vector2.zero, 12, FontStyle.Italic);
-            return;
+        }
+        else
+        {
+            foreach (var ed in enemies)
+            {
+                string label = string.IsNullOrEmpty(ed.enemyName) ? ed.name : ed.enemyName;
+                EnemyData captured = ed;
+                AddListButton(listParent, label, () => SpawnOne(captured),
+                              new Color(0.18f, 0.45f, 0.18f, 0.95f));
+            }
         }
 
-        foreach (var ed in enemies)
+        // ── Hero grant section ──
+        AddSectionHeader(listParent, "HEROES — click to grant + unlock");
+        var heroes = GatherGrantableHeroes();
+        if (heroes.Count == 0)
         {
-            string label = string.IsNullOrEmpty(ed.enemyName) ? ed.name : ed.enemyName;
-            EnemyData captured = ed;
-            AddListButton(listParent, label, () => SpawnOne(captured));
+            AddText(listParent, "EmptyHeroes", "(no heroes found)",
+                    new Vector2(0f, 0f), new Vector2(1f, 1f),
+                    Vector2.zero, Vector2.zero, 12, FontStyle.Italic);
+        }
+        else
+        {
+            foreach (var td in heroes)
+            {
+                string label = string.IsNullOrEmpty(td.towerName) ? td.name : td.towerName;
+                bool already = IsAlreadyAvailable(td);
+                if (already) label = "[OWNED] " + label;
+                TowerData captured = td;
+                AddListButton(listParent, label, () => GrantHero(captured),
+                              already ? new Color(0.30f, 0.30f, 0.30f, 0.95f)
+                                      : new Color(0.40f, 0.28f, 0.10f, 0.95f));
+            }
         }
 
         if (spawnIndexLabel != null)
             spawnIndexLabel.text = $"Spawn point: {activeSpawnIndex}";
+    }
+
+    static bool IsAlreadyAvailable(TowerData td)
+    {
+        var setup = FindFirstObjectByType<GameplayAutoSetup>();
+        if (setup == null || setup.availableTowers == null) return false;
+        foreach (var t in setup.availableTowers) if (t == td) return true;
+        return false;
+    }
+
+    void GrantHero(TowerData td)
+    {
+        if (td == null) return;
+        var setup = FindFirstObjectByType<GameplayAutoSetup>();
+        if (setup == null) { Debug.LogWarning("[HeroGrant] No GameplayAutoSetup in scene."); return; }
+
+        // Append to availableTowers if missing.
+        var list = new List<TowerData>();
+        if (setup.availableTowers != null) list.AddRange(setup.availableTowers);
+        if (!list.Contains(td)) list.Add(td);
+        setup.availableTowers = list.ToArray();
+
+        // If this hero is gated by a FacultyData, force-unlock it for the run.
+        if (GameManager.Instance != null && GameManager.Instance.allFaculties != null)
+        {
+            foreach (var f in GameManager.Instance.allFaculties)
+            {
+                if (f != null && f.professorTower == td)
+                {
+                    GameManager.Instance.DebugUnlockFaculty(f);
+                    break;
+                }
+            }
+        }
+
+        setup.RebuildTowerShop();
+        RebuildList();
+        Debug.Log($"[HeroGrant] Granted hero '{td.towerName}'.");
+    }
+
+    static List<TowerData> GatherGrantableHeroes()
+    {
+        var seen = new HashSet<TowerData>();
+        var list = new List<TowerData>();
+
+        // Heroes already in the shop.
+        var setup = FindFirstObjectByType<GameplayAutoSetup>();
+        if (setup != null && setup.availableTowers != null)
+        {
+            foreach (var t in setup.availableTowers)
+                if (t != null && t.isProfessorTower && seen.Add(t)) list.Add(t);
+        }
+
+        // Heroes registered as faculty professors (may be locked).
+        if (GameManager.Instance != null && GameManager.Instance.allFaculties != null)
+        {
+            foreach (var f in GameManager.Instance.allFaculties)
+            {
+                if (f == null || f.professorTower == null) continue;
+                if (seen.Add(f.professorTower)) list.Add(f.professorTower);
+            }
+        }
+
+        // Marathon hero pool (so faculty profs gated behind buff drops are
+        // still grantable for testing).
+        if (MarathonMode.IsActive && MarathonMode.BuffPool != null)
+        {
+            foreach (var off in MarathonMode.BuffPool)
+            {
+                if (off == null || off.kind != BuffOfferKind.UnlockHero) continue;
+                if (off.towerToUnlock == null) continue;
+                if (seen.Add(off.towerToUnlock)) list.Add(off.towerToUnlock);
+            }
+        }
+
+        return list;
+    }
+
+    static void AddSectionHeader(Transform parent, string text)
+    {
+        GameObject go = new GameObject("Hdr_" + text);
+        go.transform.SetParent(parent, false);
+        LayoutElement le = go.AddComponent<LayoutElement>();
+        le.minHeight = 22; le.preferredHeight = 22;
+        Image img = go.AddComponent<Image>();
+        img.color = new Color(0.10f, 0.10f, 0.14f, 0.95f);
+
+        GameObject txt = new GameObject("Label");
+        txt.transform.SetParent(go.transform, false);
+        RectTransform trt = txt.AddComponent<RectTransform>();
+        trt.anchorMin = Vector2.zero;
+        trt.anchorMax = Vector2.one;
+        trt.offsetMin = new Vector2(8f, 0f);
+        trt.offsetMax = new Vector2(-8f, 0f);
+        Text t = txt.AddComponent<Text>();
+        t.text = text;
+        t.fontSize = 11;
+        t.fontStyle = FontStyle.Bold;
+        t.color = new Color(1f, 0.85f, 0.5f);
+        t.alignment = TextAnchor.MiddleLeft;
+        t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
     }
 
     void SpawnOne(EnemyData data)
@@ -267,14 +394,15 @@ public class EnemySpawnDebugPanel : MonoBehaviour
     }
 
     static void AddListButton(Transform parent, string label,
-                              UnityEngine.Events.UnityAction onClick)
+                              UnityEngine.Events.UnityAction onClick,
+                              Color? color = null)
     {
         GameObject go = new GameObject(label);
         go.transform.SetParent(parent, false);
         LayoutElement le = go.AddComponent<LayoutElement>();
         le.minHeight = 26; le.preferredHeight = 26;
         Image img = go.AddComponent<Image>();
-        img.color = new Color(0.18f, 0.45f, 0.18f, 0.95f);
+        img.color = color ?? new Color(0.18f, 0.45f, 0.18f, 0.95f);
         Button btn = go.AddComponent<Button>();
         btn.onClick.AddListener(onClick);
 

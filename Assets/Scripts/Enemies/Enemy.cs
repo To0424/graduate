@@ -16,7 +16,10 @@ public class Enemy : MonoBehaviour
     // ── Slow state ────────────────────────────────────────────────────────────
     private float _slowMultiplier = 1f;
     private float _slowTimer      = 0f;
-
+    // ── Pull state (Hayden's Mucodec) ────────────────────────────────────────
+    private Vector3 _pullCenter;
+    private float   _pullStrength = 0f;
+    private float   _pullTimer    = 0f;
     // ── Shield Aura state ─────────────────────────────────────────────────────
     private float _auraTickTimer = 0f;
 
@@ -45,6 +48,19 @@ public class Enemy : MonoBehaviour
     public static event Action<Enemy> OnEnemyDeath;
     public static event Action<Enemy> OnEnemyReachedExit;
     public static event Action<Enemy> OnBossDefeated;
+
+    // ── Spawn SFX (cached) ────────────────────────────────────────────────────
+    private static AudioClip _spawnClip;
+    private static bool     _spawnClipLoaded;
+    private const string    SPAWN_CLIP_RESOURCE = "bibilabu";
+    private const float     SPAWN_CLIP_VOLUME   = 0.6f;
+
+    // ── Hit flash ─────────────────────────────────────────────────────────────
+    private SpriteRenderer _flashSr;
+    private Color          _flashOriginalColor;
+    private float          _flashTimer;
+    private const float    HIT_FLASH_DURATION = 0.12f;
+    private static readonly Color HIT_FLASH_COLOR = new Color(1f, 0.35f, 0.35f, 1f);
 
     // ── Initialise ────────────────────────────────────────────────────────────
 
@@ -83,6 +99,27 @@ public class Enemy : MonoBehaviour
         // ApplyArchetypeVisuals using its own bossScale).
         if (data.visualScale > 0f)
             transform.localScale = Vector3.one * data.visualScale;
+
+        // Cache the renderer used for the hit-flash and remember its original color.
+        _flashSr = GetComponent<SpriteRenderer>();
+        if (_flashSr != null) _flashOriginalColor = _flashSr.color;
+        _flashTimer = 0f;
+
+        if (data.playSpawnSound) PlaySpawnSound();
+    }
+
+    static void PlaySpawnSound()
+    {
+        if (!_spawnClipLoaded)
+        {
+            _spawnClip = Resources.Load<AudioClip>(SPAWN_CLIP_RESOURCE);
+            _spawnClipLoaded = true;
+        }
+        if (_spawnClip == null) return;
+
+        // Use the camera position so the clip is always audible regardless of 2D/3D rolloff.
+        Vector3 pos = Camera.main != null ? Camera.main.transform.position : Vector3.zero;
+        AudioSource.PlayClipAtPoint(_spawnClip, pos, SPAWN_CLIP_VOLUME);
     }
 
     void ApplyArchetypeVisuals()
@@ -250,6 +287,13 @@ public class Enemy : MonoBehaviour
     {
         if (_isDead || waypoints == null || waypoints.Length == 0) return;
 
+        // Tick hit-flash
+        if (_flashTimer > 0f && _flashSr != null)
+        {
+            _flashTimer -= Time.deltaTime;
+            if (_flashTimer <= 0f) _flashSr.color = _flashOriginalColor;
+        }
+
         // Tick slow
         if (_slowTimer > 0f)
         {
@@ -263,6 +307,16 @@ public class Enemy : MonoBehaviour
                 if (sr != null && data.archetype == EnemyArchetype.Standard)
                     sr.color = data.sprite == null ? Color.red : Color.white;
             }
+        }
+
+        // Tick pull — drags the enemy toward the pull center each frame.
+        // Runs *in addition* to MoveAlongPath so they keep heading along the
+        // path direction, but get sucked toward the center while active.
+        if (_pullTimer > 0f)
+        {
+            _pullTimer -= Time.deltaTime;
+            transform.position = Vector3.MoveTowards(
+                transform.position, _pullCenter, _pullStrength * Time.deltaTime);
         }
 
         MoveAlongPath();
@@ -475,6 +529,22 @@ public class Enemy : MonoBehaviour
         if (duration > _slowTimer) _slowTimer = duration;
     }
 
+    /// <summary>Called by a Hero's PullToCenter skill. Drags this enemy toward
+    /// <paramref name="center"/> at <paramref name="strength"/> units/second
+    /// for <paramref name="duration"/> seconds. Pulls compose with normal
+    /// path movement (the enemy still tries to walk).</summary>
+    public void ApplyPull(Vector3 center, float strength, float duration)
+    {
+        if (_isDead) return;
+        // Always take the strongest active pull, refresh on equal / longer.
+        if (strength >= _pullStrength || _pullTimer <= 0f)
+        {
+            _pullCenter   = center;
+            _pullStrength = Mathf.Max(0f, strength);
+        }
+        if (duration > _pullTimer) _pullTimer = duration;
+    }
+
     /// <summary>Returns false for unrevealed Stealth enemies so towers won't target them.</summary>
     public bool IsTargetable() => IsRevealed;
 
@@ -528,12 +598,21 @@ public class Enemy : MonoBehaviour
         {
             currentShield -= damage;
             if (currentShield < 0) currentShield = 0;
+            TriggerHitFlash();
             return;
         }
 
         currentHealth -= damage;
+        TriggerHitFlash();
         if (currentHealth <= 0)
             Die();
+    }
+
+    void TriggerHitFlash()
+    {
+        if (_flashSr == null) return;
+        _flashSr.color = HIT_FLASH_COLOR;
+        _flashTimer = HIT_FLASH_DURATION;
     }
 
     void Die()
