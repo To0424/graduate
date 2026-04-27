@@ -300,6 +300,7 @@ public class QuickTestBootstrap : MonoBehaviour
         tank.enemyName   = "Tank Bug";
         tank.moveSpeed   = 1.2f;
         tank.maxHealth   = 250;
+        tank.artFacesRight = true;
         tank.goldReward  = 25;
         tank.courseTier  = 2;
         tank.archetype   = EnemyArchetype.Standard;
@@ -326,6 +327,7 @@ public class QuickTestBootstrap : MonoBehaviour
         boss.moveSpeed   = 0.9f;
         boss.maxHealth   = 800;
         boss.goldReward  = 80;
+        boss.artFacesRight = true;
         boss.courseTier  = 3;
         boss.archetype   = EnemyArchetype.Boss;
         boss.bossScale   = 2.2f;
