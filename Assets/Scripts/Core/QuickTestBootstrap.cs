@@ -327,6 +327,9 @@ public class QuickTestBootstrap : MonoBehaviour
         stealth.goldReward = 30;
         stealth.courseTier = 2;
         stealth.archetype  = EnemyArchetype.Stealth;
+        stealth.animatorController = Resources.Load<RuntimeAnimatorController>("Animators/dad");
+        stealth.artFacesRight      = true;   // or false, depending on the art
+        stealth.visualScale        = 2f; 
 
         EnemyData boss = ScriptableObject.CreateInstance<EnemyData>();
         boss.enemyName   = "Chatterbox";
@@ -380,7 +383,9 @@ public class QuickTestBootstrap : MonoBehaviour
         shieldAura.shieldAuraRadius   = 2.5f;
         shieldAura.shieldAuraAmount   = 30;
         shieldAura.shieldAuraInterval = 3f;
-
+        shieldAura.animatorController = Resources.Load<RuntimeAnimatorController>("Animators/dad");
+        shieldAura.artFacesRight      = true;   // or false, depending on the art
+        shieldAura.visualScale        = 2f;   // optional size tweak
         return new EnemyData[] { basic, fast, tank, shielded, stealth, boss, splitter, shieldAura };
     }
 
