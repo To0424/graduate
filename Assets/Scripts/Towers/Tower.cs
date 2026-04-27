@@ -264,7 +264,8 @@ public class Tower : MonoBehaviour
             float effDur    = data.slowOnHitDuration + _bonusSlowDuration;
             proj.Initialize(target, dmg, data.damageType,
                             effSplash, effFrac,
-                            effSlow, effDur);
+                            effSlow, effDur,
+                            data.arcHeight, data.projectileSpriteOverride);
         }
     }
 

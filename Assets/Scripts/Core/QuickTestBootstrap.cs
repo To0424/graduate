@@ -410,6 +410,10 @@ public class QuickTestBootstrap : MonoBehaviour
         cannon.damageType           = DamageType.Normal;
         cannon.splashRadius         = 1.4f;
         cannon.splashDamageFraction = 0.7f;
+        // Lob the shot in a parabola so AOE feels like a mortar instead of
+        // a straight bullet. Tweak arcHeight in the inspector or here to
+        // taste; 1.2 world-units gives a nice mid-flight peak.
+        cannon.arcHeight            = 1.2f;
 
         // Frost Tower — small splash + slows on hit.
         TowerData frost = ScriptableObject.CreateInstance<TowerData>();

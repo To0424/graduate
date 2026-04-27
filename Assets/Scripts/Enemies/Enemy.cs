@@ -555,6 +555,9 @@ public class Enemy : MonoBehaviour
         if (data.archetype == EnemyArchetype.Boss)
             OnBossDefeated?.Invoke(this);
 
+        // Spawn the smoke-puff (or per-enemy override) at the death position.
+        EnemyDeathFX.Spawn(data, transform.position, transform.localScale);
+
         Destroy(gameObject);
     }
 

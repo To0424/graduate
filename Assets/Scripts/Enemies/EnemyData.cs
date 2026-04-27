@@ -26,6 +26,16 @@ public class EnemyData : ScriptableObject
     [Tooltip("Optional Animator Controller. If set, the Enemy prefab's Animator will use this controller for this enemy type, allowing per-enemy animations. If null, the prefab's default controller (or the static sprite) is used.")]
     public RuntimeAnimatorController animatorController;
 
+    [Header("Death FX")]
+    [Tooltip("OPTIONAL per-enemy death animation override. If null, the global default (Resources/Animators/EnemyDeath.controller, falling back to a procedural smoke puff) is used. Drop a unique controller here for boss-specific death effects.")]
+    public RuntimeAnimatorController deathAnimatorOverride;
+    [Tooltip("OPTIONAL per-enemy death sprite override (single frame fallback when no animator is supplied). If null the enemy's main sprite is reused.")]
+    public Sprite deathSpriteOverride;
+    [Tooltip("Lifetime in seconds of the spawned death-FX GameObject. Should match the length of the death animation clip.")]
+    public float deathFxDuration = 0.55f;
+    [Tooltip("Uniform scale applied to the spawned death-FX GameObject. Use this to make boss puffs bigger.")]
+    public float deathFxScale = 1f;
+
     [Header("Sprite Orientation & Size")]
     [Tooltip("Disable to skip horizontal flipping based on travel direction (useful if the animation already handles facing or has no clear left/right pose).")]
     public bool flipWithDirection = true;

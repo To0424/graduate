@@ -54,6 +54,12 @@ public class TowerData : ScriptableObject
     [Tooltip("Duration in seconds of the on-hit slow.")]
     public float slowOnHitDuration = 0f;
 
+    [Header("Projectile Trajectory")]
+    [Tooltip("If > 0, the projectile follows a parabolic arc to its target (peak height in world units). Use this for cannon-style lobs. 0 = straight-line homing.")]
+    public float arcHeight = 0f;
+    [Tooltip("Optional sprite to use for the projectile (overrides the prefab's sprite if assigned). Lets you swap the visual without making a new prefab.")]
+    public Sprite projectileSpriteOverride;
+
     [Header("Hero Skill (Professor only)")]
     [Tooltip("Assign a HeroSkillData asset to make this tower a Hero with an active skill.")]
     public HeroSkillData heroSkill;

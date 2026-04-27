@@ -314,7 +314,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   allFaculties:
   - {fileID: 11400000, guid: df1ec4a5f5bde9a4da3da3bff03fa812, type: 2}
-  skillTreeData: {fileID: 11400000, guid: 7e8bbc3283fd75a4a970073a395def95, type: 2}
 --- !u!4 &848728347
 Transform:
   m_ObjectHideFlags: 0

@@ -186,7 +186,16 @@ public class BuffSelectionUI : MonoBehaviour
     {
         if (root != null) Destroy(root);
         isOpen = false;
-        Time.timeScale = 1f;
+        // Restore the player's selected speed (1x/2x/3x). Forcing 1x here
+        // would silently desync the speed-toggle button label in HUDManager.
+        if (GameSpeedController.Instance != null)
+        {
+            Time.timeScale = GameSpeedController.CurrentMultiplier;
+        }
+        else
+        {
+            Time.timeScale = 1f;
+        }
     }
 
     void EnsureCanvas()
